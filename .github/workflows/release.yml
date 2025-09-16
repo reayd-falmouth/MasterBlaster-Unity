@@ -2,7 +2,7 @@ name: Build and Release 🚀🚀🚀
 
 env:
   ITCHIO_USER: reayd-falmouth
-  ITCH_PROJECT: coral-defense
+  ITCH_PROJECT: masterblaster
 
 on:
   workflow_dispatch:
