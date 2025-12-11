@@ -347,9 +347,31 @@ namespace Core
             PlayOneShotSafe(sfxSource, noBuy, 1.0f);
         }
         
+        // public void PlayObjectMove()
+        // {
+        //     PlayOneShotSafe(sfxSource, moveEffect, 1.0f);
+        // }
+        
         public void PlayObjectMove()
         {
-            PlayOneShotSafe(sfxSource, moveEffect, 1.0f);
+            // 1. Check if the sound is already playing to avoid restarting the loop
+            if (sfxSource != null && !sfxSource.isPlaying)
+            {
+                // 2. Assign the clip and start playing it
+                sfxSource.clip = moveEffect;
+                sfxSource.loop = true; // IMPORTANT: Set it to loop
+                sfxSource.Play();
+            }
+        }
+
+        public void StopObjectMove()
+        {
+            // 1. Check if the loop source is playing
+            if (sfxSource != null && sfxSource.isPlaying)
+            {
+                // 2. Stop the playback
+                sfxSource.Stop();
+            }
         }
     }
 }

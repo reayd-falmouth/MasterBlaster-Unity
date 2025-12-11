@@ -32,7 +32,8 @@ namespace Scenes.Arena.Bomb
         private float fuseTime;
 
         private bool detonated;
-    
+        private bool isMoving;
+        
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
@@ -87,19 +88,31 @@ namespace Scenes.Arena.Bomb
 
                 SetDirection(input);
             }
+            if (mode == BombMode.Remote && isMoving && direction == Vector2.zero)
+            {
+                StopMoveSound();
+            }
         }
-
+        
         private void FixedUpdate()
         {
-            if (detonated || rb == null) return;
+            if (detonated || rb == null) return; //
 
-            if (mode == BombMode.Remote && direction != Vector2.zero)
+            if (mode == BombMode.Remote && direction != Vector2.zero) //
             {
-                Vector2 translation = speed * Time.fixedDeltaTime * direction;
-                if (!Physics2D.OverlapCircle(rb.position + translation, 0.3f, 
-                        LayerMask.GetMask("Destructible")))
+                Vector2 translation = speed * Time.fixedDeltaTime * direction; //
+                
+                // Define layers that should block the bomb's movement: Walls and Destructibles.
+                int blockingLayers = LayerMask.GetMask("Stage", "Destructible");
+                
+                // Check if the next position overlaps with any object on the blocking layers.
+                if (!Physics2D.OverlapCircle(rb.position + translation, 0.3f, blockingLayers))
                 {
                     rb.MovePosition(rb.position + translation);
+                    if (!isMoving)
+                    {
+                        PlayMoveSound();
+                    }
                 }
             }
         }
@@ -153,6 +166,10 @@ namespace Scenes.Arena.Bomb
                 owner.stop = false;
                 owner.SetRemoteBombVisual(false);
             }
+            if (isMoving)
+            {
+                StopMoveSound();
+            }
         }
     
         // --- SUPERMAN PUSH LOGIC ---
@@ -170,7 +187,10 @@ namespace Scenes.Arena.Bomb
                     // Work out push direction from contact points
                     Vector2 pushDir = (rb.position - (Vector2)collision.transform.position).normalized;
                     SetDirection(pushDir);
-                    AudioController.I?.PlayObjectMove();
+                    if (!isMoving)
+                    {
+                        PlayMoveSound();
+                    }
                 }
             }
         }
@@ -184,6 +204,10 @@ namespace Scenes.Arena.Bomb
                 {
                     Vector2 pushDir = (rb.position - (Vector2)collision.transform.position).normalized;
                     SetDirection(pushDir);
+                    if (!isMoving && rb.linearVelocity.sqrMagnitude > 0.01f)
+                    {
+                        PlayMoveSound();
+                    }
                 }
             }
         }
@@ -198,7 +222,20 @@ namespace Scenes.Arena.Bomb
 
                 // Reset to idle animation
                 SetDirection(Vector2.zero);
+                StopMoveSound();
             }
+        }
+        private void PlayMoveSound()
+        {
+            AudioController.I?.PlayObjectMove();
+            isMoving = true;
+        }
+
+        private void StopMoveSound()
+        {
+            // This is the crucial line that stops the sound loop
+            AudioController.I?.StopObjectMove();
+            isMoving = false;
         }
     }
 }

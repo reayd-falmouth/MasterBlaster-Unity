@@ -70,6 +70,7 @@ namespace Scenes.Arena.Map
 
         public void DestroyBlock()
         {
+            Debug.Log("Block being destroyed");
             destroyed = true;
 
             // play animation if present
@@ -78,17 +79,31 @@ namespace Scenes.Arena.Map
                 anim.playOnStart = true;
                 anim.StartAnimation();
             }
-
+            
             // schedule actual removal after anim
             Destroy(gameObject, destructionTime);
         }
 
         private void OnDestroy()
         {
+            if (!gameObject.scene.isLoaded) return;
+            
+            SpawnItem();
+        }
+        
+        private void SpawnItem()
+        {
             if (spawnableItems.Length > 0 && Random.value < itemSpawnChance)
             {
                 int randomIndex = Random.Range(0, spawnableItems.Length);
                 Instantiate(spawnableItems[randomIndex], transform.position, Quaternion.identity);
+        
+                // This log should now appear in your console when an item drops
+                Debug.Log($"SUCCESS: Instantiated item {spawnableItems[randomIndex].name} via Invoke."); 
+            }
+            else
+            {
+                Debug.Log("FAIL: Item spawn condition failed (chance roll or empty list).");
             }
         }
 

@@ -229,9 +229,7 @@ namespace Scenes.Arena.Bomb
         public void ApplyUpgrades(int playerId)
         {
             // Reset to base values first
-            bombAmount = 1;
             bombsRemaining = bombAmount;
-            explosionRadius = 1;
             timeBomb = false;
             remoteBomb = false;
 
