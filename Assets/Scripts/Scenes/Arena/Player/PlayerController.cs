@@ -141,16 +141,108 @@ namespace Scenes.Arena.Player
             GameManager.Instance.CheckWinState();
         }
         
+        // public void ApplyUpgrades()
+        // {
+        //     // Coins
+        //     coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+        //
+        //     // Speed boost (stackable)
+        //     int speedBoost = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.SpeedUp}", 0);
+        //     if (speedBoost > 0) {
+        //         speed += 2 * speedBoost;
+        //         Debug.Log($"[PlayerController] Player {playerId} speed upgraded by {2 * speedBoost}, total speed: {speed}");
+        //     }
+        //     
+        //     Debug.Log($"[PlayerController] Player {playerId} upgrades applied.");
+        // }
+        
+        // Inside PlayerController.cs
+
         public void ApplyUpgrades()
         {
+            // Ensure we have a valid Player ID to look up preferences
+            if (playerId <= 0)
+            {
+                Debug.LogError("[PlayerController] Cannot apply upgrades: Player ID is invalid.");
+                return;
+            }
+            
+            // Reset player stats that are affected by stackable upgrades (like speed, bomb stats)
+            // NOTE: You'll need to reset other stats here if they are affected by stackable upgrades.
+            // For simplicity, we assume 'speed' starts at 5f (as defined in the header) 
+            // and this function is called on start/enable.
+            speed = 5f; 
+
             // Coins
             coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+            
+            // ---------------------------------------------------------------------------------
+            // 🔁 STACKABLE UPGRADES (PowerUp, ExtraBomb, SpeedUp)
+            // ---------------------------------------------------------------------------------
 
-            // Speed boost (stackable)
+            // Speed boost (stackable) - Multiplies base speed
             int speedBoost = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.SpeedUp}", 0);
             if (speedBoost > 0) {
+                // Based on existing code: speed is upgraded by 2 units per stack
                 speed += 2 * speedBoost;
                 Debug.Log($"[PlayerController] Player {playerId} speed upgraded by {2 * speedBoost}, total speed: {speed}");
+            }
+
+            // Extra Bomb (stackable) - Increases max bomb count
+            int extraBombCount = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.ExtraBomb}", 0);
+            if (extraBombCount > 0) {
+                // You will need to access and modify the BombController's bomb limit here.
+                // Example: GetComponent<BombController>().AddBombLimit(extraBombCount);
+                Debug.Log($"[PlayerController] Player {playerId} received {extraBombCount} extra bombs.");
+            }
+            
+            // Power Up (stackable) - Increases bomb range/power
+            int powerUpCount = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.PowerUp}", 0);
+            if (powerUpCount > 0) {
+                // You will need to access and modify the BombController's explosion size/power here.
+                // Example: GetComponent<BombController>().AddPower(powerUpCount);
+                Debug.Log($"[PlayerController] Player {playerId} received {powerUpCount} bomb power upgrades.");
+            }
+
+            // ---------------------------------------------------------------------------------
+            // ✅ TOGGLE UPGRADES (Superman, Ghost, Protection, Controller, Timebomb)
+            // ---------------------------------------------------------------------------------
+
+            // Superman (Toggle) - Allows walking through walls
+            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Superman}", 0) == 1) {
+                // You need to add or enable a component/ability script that handles wall-passing.
+                // Example: GetComponent<SupermanAbility>().Activate();
+                Debug.Log($"[PlayerController] Player {playerId} is Superman.");
+            }
+            
+            // Ghost (Toggle) - Allows walking through bombs
+            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Ghost}", 0) == 1) {
+                // You need to add or enable a component/ability script that disables collision with bombs.
+                // Example: GetComponent<GhostAbility>().Activate();
+                Debug.Log($"[PlayerController] Player {playerId} is a Ghost.");
+            }
+
+            // Protection (Toggle) - Protects against one death
+            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Protection}", 0) == 1) {
+                // You need to add or enable a component/ability script that listens to OnExplosionHit
+                // and returns 'true' once to block the death sequence.
+                // Example: GetComponent<ProtectionAbility>().Activate();
+                Debug.Log($"[PlayerController] Player {playerId} has Protection.");
+            }
+            
+            // Controller (Toggle) - Allows remote detonation of bombs
+            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Controller}", 0) == 1) {
+                // You need to enable the remote bomb functionality in the BombController.
+                // This is separate from the remote *visual* state.
+                // Example: GetComponent<BombController>().EnableRemoteControl();
+                Debug.Log($"[PlayerController] Player {playerId} has a Remote Controller.");
+            }
+            
+            // Timebomb (Toggle) - Allows setting bomb fuse time
+            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Timebomb}", 0) == 1) {
+                // You need to enable the ability to set the time in the BombController.
+                // Example: GetComponent<BombController>().EnableTimebombFeature();
+                Debug.Log($"[PlayerController] Player {playerId} has Timebombs.");
             }
             
             Debug.Log($"[PlayerController] Player {playerId} upgrades applied.");

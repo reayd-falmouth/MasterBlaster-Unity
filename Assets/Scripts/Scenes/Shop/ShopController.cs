@@ -33,7 +33,7 @@ namespace Scenes.Shop
             playerCount = PlayerPrefs.GetInt("Players", 2);
             currentPlayer = 1; // start with Player 1
             // 🔹 Initialise upgrades for all players (coins are left alone)
-            InitialisePlayerPrefs(playerCount);
+            SessionManager.Instance.Initialize(playerCount);
             
             UpdateMenuText();
             UpdatePointers();
