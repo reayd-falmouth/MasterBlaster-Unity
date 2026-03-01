@@ -72,49 +72,43 @@ namespace Core
             Debug.Log($"[Flow] Booted in '{sceneName}' → {state}");
         }
 
+        /// <summary>
+        /// Returns the next flow state when the current scene signals "done". Uses PlayerPrefs for Gambling/Shop.
+        /// Used by SignalScreenDone and by EditMode tests. Countdown always precedes Game (arena).
+        /// </summary>
+        public static FlowState GetNextState(FlowState currentState)
+        {
+            switch (currentState)
+            {
+                case FlowState.Credits:
+                    return FlowState.Title;
+                case FlowState.Title:
+                    return FlowState.Menu;
+                case FlowState.Menu:
+                    return FlowState.Countdown;
+                case FlowState.Countdown:
+                    return FlowState.Game;
+                case FlowState.Standings:
+                    if (PlayerPrefs.GetInt("Gambling", 1) == 1)
+                        return FlowState.Wheel;
+                    if (PlayerPrefs.GetInt("Shop", 1) == 1)
+                        return FlowState.Shop;
+                    return FlowState.Countdown;
+                case FlowState.Wheel:
+                    if (PlayerPrefs.GetInt("Shop", 1) == 1)
+                        return FlowState.Shop;
+                    return FlowState.Countdown;
+                case FlowState.Shop:
+                    return FlowState.Countdown;
+                default:
+                    return currentState;
+            }
+        }
+
         // -------- Public signals from scenes --------
         public void SignalScreenDone()
         {
-            switch (state)
-            {
-                case FlowState.Credits:
-                    GoTo(FlowState.Title);
-                    break;
-
-                case FlowState.Title:
-                    GoTo(FlowState.Menu);
-                    break;
-
-                case FlowState.Menu:
-                    SignalMenuStart();
-                    break;
-
-                case FlowState.Countdown:
-                    GoTo(FlowState.Game);
-                    break;
-
-                case FlowState.Standings:
-                    // If gambling enabled → Wheel first
-                    if (PlayerPrefs.GetInt("Gambling", 1) == 1)
-                        GoTo(FlowState.Wheel);
-                    else if (PlayerPrefs.GetInt("Shop", 1) == 1)
-                        GoTo(FlowState.Shop);
-                    else
-                        GoTo(FlowState.Game);
-                    break;
-
-                case FlowState.Wheel:
-                    // After wheel → shop if enabled, otherwise straight to game
-                    if (PlayerPrefs.GetInt("Shop", 1) == 1)
-                        GoTo(FlowState.Shop);
-                    else
-                        GoTo(FlowState.Game);
-                    break;
-
-                case FlowState.Shop:
-                    GoTo(FlowState.Countdown);
-                    break;
-            }
+            GoTo(GetNextState(state));
         }
 
         public void SignalMenuStart()

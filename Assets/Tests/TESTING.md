@@ -16,7 +16,7 @@ EditMode tests live in **EditMode/**.
 | `Scenes/Shop/ShopController` (GetPointerTextForIndex) | EditMode/ShopControllerTests.cs |
 | `Scenes/Arena/ArenaLogic`, `WinStateResult`, `PlayerSlot`, `WinOutcome` | EditMode/PlayerSetupTests.cs, EditMode/WinStateTests.cs |
 | `Utilities/Singleton` | EditMode/SingletonTests.cs |
-| `Core/SceneFlowManager` (ShouldAdvanceOnAnyInput) | EditMode/SceneFlowManagerTests.cs |
+| `Core/SceneFlowManager` (ShouldAdvanceOnAnyInput, GetNextState transition logic) | EditMode/SceneFlowManagerTests.cs |
 
 ## PlayMode tests
 
