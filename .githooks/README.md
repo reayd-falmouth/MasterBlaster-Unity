@@ -4,11 +4,15 @@ Pre-commit runs **linting** (CSharpier on `Assets/`) and **Unity EditMode tests*
 
 ## Enable hooks
 
-From the repo root:
+From the repo root run **one** of:
 
 ```bash
 git config core.hooksPath .githooks
 ```
+
+Or (Windows PowerShell): `.\.githooks\setup.ps1`
+
+**Hooks not running?** Git only uses `.githooks` when `core.hooksPath` is set. Run the command above once per clone. Check with: `git config core.hooksPath` — it should print `.githooks`.
 
 To disable later:
 
