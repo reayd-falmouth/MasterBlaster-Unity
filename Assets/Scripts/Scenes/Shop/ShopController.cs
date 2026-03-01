@@ -56,10 +56,14 @@ namespace Scenes.Shop
             playerCount = PlayerPrefs.GetInt("Players", 2);
             currentPlayer = 1; // start with Player 1
             // Only initialize SessionManager if not yet set (e.g. first time); do not wipe state between rounds
-            if (SessionManager.Instance != null
-                && (SessionManager.Instance.PlayerUpgrades == null
+            if (
+                SessionManager.Instance != null
+                && (
+                    SessionManager.Instance.PlayerUpgrades == null
                     || SessionManager.Instance.PlayerUpgrades.Count == 0
-                    || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)))
+                    || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)
+                )
+            )
             {
                 SessionManager.Instance.Initialize(playerCount);
             }

@@ -12,7 +12,8 @@ public class SessionManagerEditor : Editor
         DrawDefaultInspector();
 
         var sm = (SessionManager)target;
-        if (sm == null) return;
+        if (sm == null)
+            return;
 
         EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("Session state (runtime)", EditorStyles.boldLabel);
@@ -54,7 +55,10 @@ public class SessionManagerEditor : Editor
                     foreach (var upgradeKv in playerKv.Value)
                     {
                         if (upgradeKv.Value != 0)
-                            EditorGUILayout.LabelField(upgradeKv.Key.ToString(), upgradeKv.Value.ToString());
+                            EditorGUILayout.LabelField(
+                                upgradeKv.Key.ToString(),
+                                upgradeKv.Value.ToString()
+                            );
                     }
                 }
                 EditorGUI.indentLevel--;

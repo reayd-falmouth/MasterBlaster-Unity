@@ -124,7 +124,8 @@ namespace Scenes.Arena
             if (movement != null)
             {
                 movement.playerId = id;
-                movement.wins = SessionManager.Instance != null ? SessionManager.Instance.GetWins(id) : 0;
+                movement.wins =
+                    SessionManager.Instance != null ? SessionManager.Instance.GetWins(id) : 0;
             }
             playerObj.SetActive(true);
         }
@@ -152,9 +153,10 @@ namespace Scenes.Arena
             }
 
             // Use SessionManager as source of truth for win count when deciding Overs vs Standings
-            int currentWinsOfLastAlive = (lastAlivePlayerId != 0 && SessionManager.Instance != null)
-                ? SessionManager.Instance.GetWins(lastAlivePlayerId)
-                : lastAlivePcWins;
+            int currentWinsOfLastAlive =
+                (lastAlivePlayerId != 0 && SessionManager.Instance != null)
+                    ? SessionManager.Instance.GetWins(lastAlivePlayerId)
+                    : lastAlivePcWins;
 
             int winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
             var result = ArenaLogic.EvaluateWinState(
@@ -182,9 +184,10 @@ namespace Scenes.Arena
                         movement.wins++;
 
                     // Defensive: re-check from SessionManager in case we were given stale wins
-                    int winsAfterThisRound = SessionManager.Instance != null
-                        ? SessionManager.Instance.GetWins(movement.playerId)
-                        : movement.wins;
+                    int winsAfterThisRound =
+                        SessionManager.Instance != null
+                            ? SessionManager.Instance.GetWins(movement.playerId)
+                            : movement.wins;
                     bool shouldGoToOvers = winsAfterThisRound >= winsNeeded;
 
                     if (result.Outcome == WinOutcome.GoToOvers || shouldGoToOvers)

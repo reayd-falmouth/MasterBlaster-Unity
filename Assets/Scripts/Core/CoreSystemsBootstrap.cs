@@ -15,14 +15,18 @@ namespace Core
             {
                 var go = new GameObject("SessionManager");
                 go.AddComponent<SessionManager>();
-                Debug.Log("[CoreSystemsBootstrap] SessionManager created and will persist across scenes.");
+                Debug.Log(
+                    "[CoreSystemsBootstrap] SessionManager created and will persist across scenes."
+                );
             }
 
             if (SceneFlowManager.Instance == null)
             {
                 var go = new GameObject("SceneFlowManager");
                 go.AddComponent<SceneFlowManager>();
-                Debug.Log("[CoreSystemsBootstrap] SceneFlowManager created and will persist across scenes.");
+                Debug.Log(
+                    "[CoreSystemsBootstrap] SceneFlowManager created and will persist across scenes."
+                );
             }
         }
     }
