@@ -21,6 +21,8 @@ public class SingletonPlayModeTests
         _gameObject = new GameObject("PersistentSingletonTest");
         var singleton = _gameObject.AddComponent<TestPersistentSingleton>();
 
+        // Yield enough frames for Awake (and base Awake/DontDestroyOnLoad) to run in Play Mode
+        yield return null;
         yield return null;
 
         Assert.That(TestPersistentSingleton.Instance, Is.Not.Null);
@@ -35,12 +37,14 @@ public class SingletonPlayModeTests
         _gameObject.AddComponent<TestPersistentSingleton>();
 
         yield return null;
+        yield return null;
 
         Assert.That(TestPersistentSingleton.s_InstanceExists, Is.True);
 
         Object.DestroyImmediate(_gameObject);
         _gameObject = null;
 
+        yield return null;
         yield return null;
 
         Assert.That(TestPersistentSingleton.Instance, Is.Null);

@@ -59,7 +59,8 @@ public class CountdownControllerPlayModeTests
             Is.EqualTo("3"),
             "Countdown should show 3 when coroutine starts"
         );
-        yield return new WaitForSeconds(0.06f);
+        // Wait well past one interval (0.05s) so CI/slower frames reliably reach "2"
+        yield return new WaitForSeconds(0.15f);
         Assert.That(_countdownText.text, Is.EqualTo("2"));
     }
 }
