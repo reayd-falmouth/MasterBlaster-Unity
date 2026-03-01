@@ -10,6 +10,9 @@ public class ShopControllerTests
     [SetUp]
     public void SetUp()
     {
+        if (SessionManager.Instance != null)
+            Object.DestroyImmediate(SessionManager.Instance.gameObject);
+
         _sessionManagerGo = new GameObject("SessionManagerForShopTests");
         _sessionManagerGo.AddComponent<SessionManager>();
     }

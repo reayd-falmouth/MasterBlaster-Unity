@@ -11,6 +11,9 @@ public class SessionManagerTests
     [SetUp]
     public void SetUp()
     {
+        if (SessionManager.Instance != null)
+            Object.DestroyImmediate(SessionManager.Instance.gameObject);
+
         _gameObject = new GameObject("SessionManagerTest");
         _sessionManager = _gameObject.AddComponent<SessionManager>();
     }
