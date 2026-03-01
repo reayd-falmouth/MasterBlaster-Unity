@@ -4,6 +4,13 @@ using UnityEngine;
 
 public class SceneFlowManagerTests
 {
+    [TearDown]
+    public void TearDown()
+    {
+        PlayerPrefs.DeleteKey("Gambling");
+        PlayerPrefs.DeleteKey("Shop");
+    }
+
     // -------- GetNextState (transition logic; countdown always before arena) --------
 
     [Test]
