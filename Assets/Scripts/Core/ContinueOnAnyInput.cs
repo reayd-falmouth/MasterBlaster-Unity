@@ -24,7 +24,10 @@ namespace Core
 
             if (PressedThisFrame())
             {
-                if (SceneFlowManager.I == null || !SceneFlowManager.ShouldAdvanceOnAnyInput(SceneFlowManager.I.CurrentState))
+                if (
+                    SceneFlowManager.I == null
+                    || !SceneFlowManager.ShouldAdvanceOnAnyInput(SceneFlowManager.I.CurrentState)
+                )
                     return;
                 fired = true;
                 SceneFlowManager.I.SignalScreenDone();
@@ -81,7 +84,10 @@ public class ContinueOnAnyInput : MonoBehaviour
             || Input.GetButtonDown("Fire1")
         )
         {
-            if (SceneFlowManager.I == null || !SceneFlowManager.ShouldAdvanceOnAnyInput(SceneFlowManager.I.CurrentState))
+            if (
+                SceneFlowManager.I == null
+                || !SceneFlowManager.ShouldAdvanceOnAnyInput(SceneFlowManager.I.CurrentState)
+            )
                 return;
             fired = true;
             SceneFlowManager.I.SignalScreenDone();
