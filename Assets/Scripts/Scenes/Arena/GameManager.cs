@@ -37,6 +37,17 @@ namespace Scenes.Arena
         {
             players = GameObject.FindGameObjectsWithTag("Player");
             int playerCount = PlayerPrefs.GetInt("Players", 2);
+
+            // Ensure SessionManager has structure for this game (e.g. first round from menu); do not re-initialize when returning from shop
+            if (
+                SessionManager.Instance.PlayerUpgrades == null
+                || SessionManager.Instance.PlayerUpgrades.Count == 0
+                || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)
+            )
+            {
+                SessionManager.Instance.Initialize(playerCount);
+            }
+
             SetupPlayers(playerCount);
 
             // 🔹 Force upgrades to be reapplied every new game round

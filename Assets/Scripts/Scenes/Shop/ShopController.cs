@@ -47,8 +47,15 @@ namespace Scenes.Shop
         {
             playerCount = PlayerPrefs.GetInt("Players", 2);
             currentPlayer = 1; // start with Player 1
-            // 🔹 Initialise upgrades for all players (coins are left alone)
-            SessionManager.Instance.Initialize(playerCount);
+            // Only initialize SessionManager if not yet set (e.g. first time); do not wipe state between rounds
+            if (
+                SessionManager.Instance.PlayerUpgrades == null
+                || SessionManager.Instance.PlayerUpgrades.Count == 0
+                || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)
+            )
+            {
+                SessionManager.Instance.Initialize(playerCount);
+            }
 
             UpdateMenuText();
             UpdatePointers();
@@ -198,10 +205,9 @@ namespace Scenes.Shop
             if (type == ShopItemType.Exit)
                 return;
 
-            string key = $"Player{playerId}_{type}"; // e.g. "Player1_SpeedUp"
-            int currentLevel = PlayerPrefs.GetInt(key, 0);
+            int currentLevel = SessionManager.Instance.GetUpgradeLevel(playerId, type);
             int newLevel = ShopPurchaseLogic.GetNewLevelAfterPurchase(type, currentLevel);
-            PlayerPrefs.SetInt(key, newLevel);
+            SessionManager.Instance.SetUpgradeLevel(playerId, type, newLevel);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Core;
 using Scenes.Shop;
 using UnityEngine;
@@ -43,7 +43,7 @@ namespace Scenes.Arena.Player.Abilities
         void ApplyUpgrades()
         {
             var playerId = pc.playerId;
-            active = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Ghost}", 0) == 1;
+            active = SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Ghost) == 1;
             Debug.Log($"[PlayerController] Player {playerId} ghost applied.");
         }
 
