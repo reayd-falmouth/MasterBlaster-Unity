@@ -4,20 +4,23 @@ This document lists which scripts have **unit (EditMode) tests**, **PlayMode tes
 
 ## Logic-tested (EditMode)
 
+EditMode tests live in **EditMode/**.
+
 | Script(s) | Test file |
 |-----------|-----------|
-| `Core/SceneNamesConfig` | SceneNamesConfigTests.cs |
-| `Core/SceneFlowMapper` | SceneFlowMapperTests.cs |
-| `Core/SessionManager` | SessionManagerTests.cs |
-| `Scenes/Shop/ShopItemTypeExtensions`, `ShopItemType` | ShopItemExtensionsTests.cs |
-| `Scenes/Shop/ShopPurchaseLogic` | ShopPurchaseLogicTests.cs |
-| `Scenes/Arena/ArenaLogic`, `WinStateResult`, `PlayerSlot`, `WinOutcome` | PlayerSetupTests.cs, WinStateTests.cs |
-| `Utilities/Singleton`, `PersistentSingleton` | SingletonTests.cs |
+| `Core/SceneNamesConfig` | EditMode/SceneNamesConfigTests.cs |
+| `Core/SceneFlowMapper` | EditMode/SceneFlowMapperTests.cs |
+| `Core/SessionManager` | EditMode/SessionManagerTests.cs |
+| `Scenes/Shop/ShopItemTypeExtensions`, `ShopItemType` | EditMode/ShopItemExtensionsTests.cs |
+| `Scenes/Shop/ShopPurchaseLogic` | EditMode/ShopPurchaseLogicTests.cs |
+| `Scenes/Arena/ArenaLogic`, `WinStateResult`, `PlayerSlot`, `WinOutcome` | EditMode/PlayerSetupTests.cs, EditMode/WinStateTests.cs |
+| `Utilities/Singleton` | EditMode/SingletonTests.cs |
 
 ## PlayMode tests
 
 | Script(s) | Test file |
 |-----------|-----------|
+| `Utilities/PersistentSingleton` | PlayMode/SingletonPlayModeTests.cs |
 | `Scenes/Arena/CountdownController` | PlayMode/CountdownControllerPlayModeTests.cs |
 | `Scenes/Arena/Bomb/BombController` | PlayMode/BombControllerPlayModeTests.cs |
 

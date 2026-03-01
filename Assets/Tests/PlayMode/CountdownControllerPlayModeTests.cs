@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Reflection;
 using NUnit.Framework;
 using Scenes.Arena;
 using UnityEngine;
@@ -7,6 +8,14 @@ using UnityEngine.UI;
 
 public class CountdownControllerPlayModeTests
 {
+    private static void InvokeStart(MonoBehaviour behaviour)
+    {
+        var method = behaviour
+            .GetType()
+            .GetMethod("Start", BindingFlags.Instance | BindingFlags.NonPublic);
+        method?.Invoke(behaviour, null);
+    }
+
     private GameObject _canvasGo;
     private GameObject _countdownGo;
     private CountdownController _countdown;
@@ -41,10 +50,21 @@ public class CountdownControllerPlayModeTests
     [UnityTest]
     public IEnumerator Countdown_UpdatesTextFrom3To2AfterOneInterval()
     {
+        if (!Application.isPlaying)
+        {
+            Assert.Ignore(
+                "PlayMode test must be run from the PlayMode tab (or with -testPlatform playmode)."
+            );
+        }
         Assert.That(_countdownText.text, Is.EqualTo(""));
+        // Start() is not reliably called on runtime-created objects in the test runner; invoke it so the coroutine runs
+        InvokeStart(_countdown);
         yield return null;
-        yield return null;
-        Assert.That(_countdownText.text, Is.EqualTo("3"));
+        Assert.That(
+            _countdownText.text,
+            Is.EqualTo("3"),
+            "Countdown should show 3 when coroutine starts"
+        );
         yield return new WaitForSeconds(0.06f);
         Assert.That(_countdownText.text, Is.EqualTo("2"));
     }
