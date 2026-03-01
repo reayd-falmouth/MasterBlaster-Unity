@@ -19,6 +19,7 @@ namespace Scenes.Arena.Map
         private bool destroyed = false;
 
         private AnimatedSpriteRenderer anim;
+        private AudioSource moveAudioSource;
 
         private void Awake()
         {
@@ -30,6 +31,13 @@ namespace Scenes.Arena.Map
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
 
             anim = GetComponent<AnimatedSpriteRenderer>();
+
+            moveAudioSource = GetComponent<AudioSource>();
+            if (moveAudioSource == null)
+                moveAudioSource = gameObject.AddComponent<AudioSource>();
+            moveAudioSource.playOnAwake = false;
+            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
+                moveAudioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
         }
 
         private void Start()
@@ -57,8 +65,17 @@ namespace Scenes.Arena.Map
 
             if (isMoving && !wasMoving)
             {
-                // just started moving
-                AudioController.I?.PlayObjectMove();
+                if (moveAudioSource != null && AudioController.I != null && AudioController.I.MoveEffectClip != null)
+                {
+                    moveAudioSource.clip = AudioController.I.MoveEffectClip;
+                    moveAudioSource.loop = true;
+                    moveAudioSource.Play();
+                }
+            }
+            else if (wasMoving && !isMoving)
+            {
+                if (moveAudioSource != null && moveAudioSource.isPlaying)
+                    moveAudioSource.Stop();
             }
 
             wasMoving = isMoving;

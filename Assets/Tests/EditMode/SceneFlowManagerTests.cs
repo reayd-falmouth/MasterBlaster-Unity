@@ -161,12 +161,23 @@ public class SceneFlowManagerTests
     }
 
     [Test]
+    public void ShouldAdvanceOnAnyInput_Overs_ReturnsTrue()
+    {
+        Assert.That(SceneFlowManager.ShouldAdvanceOnAnyInput(FlowState.Overs), Is.True);
+    }
+
+    [Test]
     public void ShouldAdvanceOnAnyInput_OtherStates_ReturnFalse()
     {
         Assert.That(SceneFlowManager.ShouldAdvanceOnAnyInput(FlowState.Game), Is.False);
         Assert.That(SceneFlowManager.ShouldAdvanceOnAnyInput(FlowState.Standings), Is.False);
         Assert.That(SceneFlowManager.ShouldAdvanceOnAnyInput(FlowState.Wheel), Is.False);
         Assert.That(SceneFlowManager.ShouldAdvanceOnAnyInput(FlowState.Shop), Is.False);
-        Assert.That(SceneFlowManager.ShouldAdvanceOnAnyInput(FlowState.Overs), Is.False);
+    }
+
+    [Test]
+    public void GetNextState_Overs_ReturnsMenu()
+    {
+        Assert.That(SceneFlowManager.GetNextState(FlowState.Overs), Is.EqualTo(FlowState.Menu));
     }
 }

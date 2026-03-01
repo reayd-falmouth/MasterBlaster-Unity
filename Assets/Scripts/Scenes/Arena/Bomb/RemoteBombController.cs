@@ -1,4 +1,4 @@
-﻿// RemoteBombController.cs
+// RemoteBombController.cs
 
 using System.Collections;
 using Core;
@@ -39,6 +39,8 @@ namespace Scenes.Arena.Bomb
         private bool detonated;
         private bool isMoving;
 
+        private AudioSource moveAudioSource;
+
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
@@ -47,6 +49,13 @@ namespace Scenes.Arena.Bomb
                 rb.bodyType = RigidbodyType2D.Kinematic; // default: immovable
                 rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             }
+
+            moveAudioSource = GetComponent<AudioSource>();
+            if (moveAudioSource == null)
+                moveAudioSource = gameObject.AddComponent<AudioSource>();
+            moveAudioSource.playOnAwake = false;
+            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
+                moveAudioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
 
             SetDirection(Vector2.zero);
         }
@@ -271,14 +280,24 @@ namespace Scenes.Arena.Bomb
 
         private void PlayMoveSound()
         {
-            AudioController.I?.PlayObjectMove();
+            if (moveAudioSource == null)
+            {
+                isMoving = true;
+                return;
+            }
+            if (AudioController.I != null && AudioController.I.MoveEffectClip != null)
+            {
+                moveAudioSource.clip = AudioController.I.MoveEffectClip;
+                moveAudioSource.loop = true;
+                moveAudioSource.Play();
+            }
             isMoving = true;
         }
 
         private void StopMoveSound()
         {
-            // This is the crucial line that stops the sound loop
-            AudioController.I?.StopObjectMove();
+            if (moveAudioSource != null && moveAudioSource.isPlaying)
+                moveAudioSource.Stop();
             isMoving = false;
         }
     }

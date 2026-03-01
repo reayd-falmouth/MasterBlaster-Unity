@@ -62,13 +62,16 @@ namespace Core
         /// </summary>
         public static bool ShouldAdvanceOnAnyInput(FlowState state)
         {
-            return state == FlowState.Credits || state == FlowState.Title;
+            return state == FlowState.Credits || state == FlowState.Title || state == FlowState.Overs;
         }
 
         void Start()
         {
             var sceneName = SceneManager.GetActiveScene().name;
             state = StateForSceneName(sceneName);
+            // Handle scene name typo: "TItle" (capital I) is the Title screen
+            if (state == FlowState.Menu && sceneName == "TItle")
+                state = FlowState.Title;
             Debug.Log($"[Flow] Booted in '{sceneName}' → {state}");
         }
 
@@ -100,6 +103,8 @@ namespace Core
                     return FlowState.Countdown;
                 case FlowState.Shop:
                     return FlowState.Countdown;
+                case FlowState.Overs:
+                    return FlowState.Menu;
                 default:
                     return currentState;
             }

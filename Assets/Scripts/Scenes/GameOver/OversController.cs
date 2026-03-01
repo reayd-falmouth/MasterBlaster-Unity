@@ -1,4 +1,4 @@
-﻿using Core;
+using Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,20 +6,33 @@ namespace Scenes.GameOver
 {
     public class WinnerController : MonoBehaviour
     {
+        [Header("Winner display")]
         public Text winnerText;
+
+        [Tooltip("Optional. Avatar image to show the winner. Set per-player sprites in playerAvatars (index by session match winner ID - 1).")]
+        public Image avatarImage;
+
+        [Tooltip("Optional. One sprite per player (1-based player ID). Index 0 = player 1, etc. If empty or out of range, avatar is left unchanged.")]
+        public Sprite[] playerAvatars;
 
         private void Start()
         {
-            string winnerName = PlayerPrefs.GetString("WinnerName", "Unknown");
-            winnerText.text = $"{winnerName} Wins the Match!";
-        }
+            string winnerName = SessionManager.Instance != null
+                ? SessionManager.Instance.GetMatchWinnerName()
+                : "Unknown";
+            if (winnerText != null)
+                winnerText.text = $"{winnerName} Wins the Match!".ToUpper();
 
-        // Optional: press a key to go back to main menu
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Return))
+            int winnerPlayerId = SessionManager.Instance != null
+                ? SessionManager.Instance.GetMatchWinnerPlayerId()
+                : 1;
+            if (winnerPlayerId <= 0)
+                winnerPlayerId = 1;
+            if (avatarImage != null && playerAvatars != null && playerAvatars.Length > 0)
             {
-                SceneFlowManager.I.GoTo(FlowState.Menu);
+                int index = Mathf.Clamp(winnerPlayerId - 1, 0, playerAvatars.Length - 1);
+                if (playerAvatars[index] != null)
+                    avatarImage.sprite = playerAvatars[index];
             }
         }
     }

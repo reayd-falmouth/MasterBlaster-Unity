@@ -85,9 +85,21 @@ namespace Core
         [SerializeField]
         private AudioClip explosion;
 
+        /// <summary>Clip for per-object explosion (bomb plays on its own AudioSource).</summary>
+        public AudioClip ExplosionClip => explosion;
+
+        /// <summary>Clip for per-object death (player plays on its own AudioSource).</summary>
+        public AudioClip DeathClip => die;
+
         [Header("Objects")]
         [SerializeField]
         private AudioClip moveEffect;
+
+        /// <summary>Clip for per-object move loop (remote bombs, destructibles). Movers play this on their own AudioSource.</summary>
+        public AudioClip MoveEffectClip => moveEffect;
+
+        /// <summary>SFX mixer group so mover sources can use the same bus for volume/mute.</summary>
+        public AudioMixerGroup SoundFxMixerGroup => soundFxMixerGroup;
 
         [Header("Wheel O Fortune")]
         [Tooltip("For the Wheel O Fortune")]
@@ -152,12 +164,10 @@ namespace Core
         }
 
         #region Public – UI / SFX
-
-
+        /// <summary>Explosion plays on central source so it is not cut off when the bomb is destroyed.</summary>
         public void PlayExplosion() => PlayOneShotSafe(sfxSource, explosion, 0.8f);
 
-        public void PlayDeath() => PlayOneShotSafe(sfxSource, die, 0.8f);
-
+        // Death is played on the player's AudioSource (player object stays active briefly).
         #endregion
 
         #region Public – Item Sounds
@@ -330,7 +340,8 @@ namespace Core
 
         private void ApplyVolume()
         {
-            Debug.Log("ApplyVolume");
+            if (masterMixerGroup == null || masterMixerGroup.audioMixer == null)
+                return;
             // –80 dB is effectively silent; 0 dB is full volume
             float vol = isMuted ? -80f : 0f;
             masterMixerGroup.audioMixer.SetFloat("MasterVol", vol);
@@ -409,33 +420,6 @@ namespace Core
         public void PlayNoBuy()
         {
             PlayOneShotSafe(sfxSource, noBuy, 1.0f);
-        }
-
-        // public void PlayObjectMove()
-        // {
-        //     PlayOneShotSafe(sfxSource, moveEffect, 1.0f);
-        // }
-
-        public void PlayObjectMove()
-        {
-            // 1. Check if the sound is already playing to avoid restarting the loop
-            if (sfxSource != null && !sfxSource.isPlaying)
-            {
-                // 2. Assign the clip and start playing it
-                sfxSource.clip = moveEffect;
-                sfxSource.loop = true; // IMPORTANT: Set it to loop
-                sfxSource.Play();
-            }
-        }
-
-        public void StopObjectMove()
-        {
-            // 1. Check if the loop source is playing
-            if (sfxSource != null && sfxSource.isPlaying)
-            {
-                // 2. Stop the playback
-                sfxSource.Stop();
-            }
         }
     }
 }

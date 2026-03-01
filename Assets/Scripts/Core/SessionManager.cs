@@ -17,12 +17,20 @@ namespace Core
         /// <summary>Session-only win count per player (matches won this session).</summary>
         public Dictionary<int, int> PlayerWins = new Dictionary<int, int>();
 
+        /// <summary>Session-only: player ID who won the match (0 = none). Set when transitioning to Overs, cleared on new game.</summary>
+        public int MatchWinnerPlayerId;
+
+        /// <summary>Session-only: display name of match winner. Set when transitioning to Overs, cleared on new game.</summary>
+        public string MatchWinnerName;
+
         // 3. Setup/Cleanup Method
         public void Initialize(int playerCount)
         {
             PlayerUpgrades.Clear();
             PlayerCoins.Clear();
             PlayerWins.Clear();
+            MatchWinnerPlayerId = 0;
+            MatchWinnerName = null;
             for (int id = 1; id <= playerCount; id++)
             {
                 // Initialize each player with a dictionary to store their upgrades
@@ -86,6 +94,25 @@ namespace Core
         {
             int current = PlayerWins.TryGetValue(playerId, out int w) ? w : 0;
             PlayerWins[playerId] = current + 1;
+        }
+
+        /// <summary>Store the match winner for the Overs screen. Call when transitioning to Overs.</summary>
+        public void SetMatchWinner(int playerId, string winnerName)
+        {
+            MatchWinnerPlayerId = playerId;
+            MatchWinnerName = winnerName;
+        }
+
+        /// <summary>Returns the stored match winner player ID (0 if none set).</summary>
+        public int GetMatchWinnerPlayerId()
+        {
+            return MatchWinnerPlayerId;
+        }
+
+        /// <summary>Returns the stored match winner display name, or "Unknown" if null/empty.</summary>
+        public string GetMatchWinnerName()
+        {
+            return string.IsNullOrEmpty(MatchWinnerName) ? "Unknown" : MatchWinnerName;
         }
     }
 }

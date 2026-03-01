@@ -192,8 +192,8 @@ namespace Scenes.Arena
 
                     if (result.Outcome == WinOutcome.GoToOvers || shouldGoToOvers)
                     {
-                        PlayerPrefs.SetString("WinnerName", lastAlive.name);
-                        PlayerPrefs.Save();
+                        if (SessionManager.Instance != null)
+                            SessionManager.Instance.SetMatchWinner(movement.playerId, lastAlive.name);
                         SceneFlowManager.I.GoToOvers();
                         return;
                     }

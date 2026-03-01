@@ -165,14 +165,13 @@ namespace Scenes.Arena.Bomb
             if (bomb == null)
                 return;
 
-            AudioController.I?.PlayExplosion();
-
             Vector2 position = bomb.transform.position;
             position.x = Mathf.Round(position.x);
             position.y = Mathf.Round(position.y);
 
-            // center fire
+            // center fire – play explosion sound on this instance only
             Explosion explosion = Instantiate(explosionPrefab, position, Quaternion.identity);
+            explosion.PlayExplosionSound();
             explosion.DestroyAfter(explosionDuration);
 
             // propagate

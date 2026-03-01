@@ -56,10 +56,19 @@ namespace Scenes.Arena.Player
         [HideInInspector]
         public AnimatedSpriteRenderer visualOverrideRenderer;
 
+        private AudioSource audioSource;
+
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
             activeSpriteRenderer = spriteRendererDown;
+
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+                audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
+                audioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
         }
 
         private void Start()
@@ -147,7 +156,8 @@ namespace Scenes.Arena.Player
             visualState = PlayerVisualState.Death;
             UpdateVisualState();
 
-            AudioController.I?.PlayDeath();
+            if (audioSource != null && AudioController.I != null && AudioController.I.DeathClip != null)
+                audioSource.PlayOneShot(AudioController.I.DeathClip, 0.8f);
             Invoke(nameof(OnDeathSequenceEnded), 1.25f);
         }
 
