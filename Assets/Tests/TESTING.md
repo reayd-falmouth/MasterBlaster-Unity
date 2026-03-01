@@ -13,6 +13,7 @@ EditMode tests live in **EditMode/**.
 | `Core/SessionManager` | EditMode/SessionManagerTests.cs |
 | `Scenes/Shop/ShopItemTypeExtensions`, `ShopItemType` | EditMode/ShopItemExtensionsTests.cs |
 | `Scenes/Shop/ShopPurchaseLogic` | EditMode/ShopPurchaseLogicTests.cs |
+| `Scenes/Shop/ShopController` (GetPointerTextForIndex) | EditMode/ShopControllerTests.cs |
 | `Scenes/Arena/ArenaLogic`, `WinStateResult`, `PlayerSlot`, `WinOutcome` | EditMode/PlayerSetupTests.cs, EditMode/WinStateTests.cs |
 | `Utilities/Singleton` | EditMode/SingletonTests.cs |
 | `Core/SceneFlowManager` (ShouldAdvanceOnAnyInput) | EditMode/SceneFlowManagerTests.cs |
@@ -30,7 +31,7 @@ EditMode tests live in **EditMode/**.
 No dedicated unit tests; covered by integration, PlayMode, or manual testing.
 
 - **Core:** AudioController, ContinueOnAnyInput, AnimatedSpriteRenderer
-- **Scenes/Shop:** ShopController (logic in ShopPurchaseLogic is unit-tested)
+- **Scenes/Shop:** ShopController (pointer logic and ShopPurchaseLogic are unit-tested)
 - **Scenes/Arena:** GameManager, MapSelector, ArenaShrinker, ItemPickup, Destructible, Indestructible, Bomb/Explosion, Bomb/RemoteBombController
 - **Scenes/Arena/Player:** PlayerController, DebugItemSpawner, PlayerDebugPlayerPrefs, Abilities (Ghost, Protection, Superman)
 - **Scenes:** MainMenuController, StandingsController, WheelController, OversController (GameOver)
