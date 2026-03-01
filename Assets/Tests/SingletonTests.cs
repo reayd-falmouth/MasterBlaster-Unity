@@ -16,8 +16,12 @@ public class SingletonTests
 
     private static void InvokeAwake(MonoBehaviour behaviour)
     {
-        var method = behaviour.GetType().BaseType?.GetMethod("Awake",
-            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
+        var method = behaviour
+            .GetType()
+            .BaseType?.GetMethod(
+                "Awake",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy
+            );
         method?.Invoke(behaviour, null);
     }
 

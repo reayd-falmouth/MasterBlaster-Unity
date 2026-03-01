@@ -1,9 +1,9 @@
 using System.Collections;
 using NUnit.Framework;
+using Scenes.Arena;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
-using Scenes.Arena;
 
 public class CountdownControllerPlayModeTests
 {

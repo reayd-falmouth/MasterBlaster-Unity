@@ -1,9 +1,9 @@
 using System.Collections;
 using NUnit.Framework;
-using UnityEngine;
-using UnityEngine.TestTools;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 public class BombControllerPlayModeTests
 {
