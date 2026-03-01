@@ -50,12 +50,6 @@ public class CountdownControllerPlayModeTests
     [UnityTest]
     public IEnumerator Countdown_UpdatesTextFrom3To2AfterOneInterval()
     {
-        if (!Application.isPlaying)
-        {
-            Assert.Ignore(
-                "PlayMode test must be run from the PlayMode tab (or with -testPlatform playmode)."
-            );
-        }
         Assert.That(_countdownText.text, Is.EqualTo(""));
         // Start() is not reliably called on runtime-created objects in the test runner; invoke it so the coroutine runs
         InvokeStart(_countdown);

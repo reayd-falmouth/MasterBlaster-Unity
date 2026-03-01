@@ -18,12 +18,6 @@ public class SingletonPlayModeTests
     [UnityTest]
     public IEnumerator PersistentSingleton_AfterAddComponent_InstanceIsSetAndExists()
     {
-        if (!Application.isPlaying)
-        {
-            Assert.Ignore(
-                "PlayMode test must be run from the PlayMode tab (or with -testPlatform playmode)."
-            );
-        }
         _gameObject = new GameObject("PersistentSingletonTest");
         var singleton = _gameObject.AddComponent<TestPersistentSingleton>();
 
@@ -37,12 +31,6 @@ public class SingletonPlayModeTests
     [UnityTest]
     public IEnumerator PersistentSingleton_AfterDestroy_InstanceIsNull()
     {
-        if (!Application.isPlaying)
-        {
-            Assert.Ignore(
-                "PlayMode test must be run from the PlayMode tab (or with -testPlatform playmode)."
-            );
-        }
         _gameObject = new GameObject("PersistentSingletonTest");
         _gameObject.AddComponent<TestPersistentSingleton>();
 

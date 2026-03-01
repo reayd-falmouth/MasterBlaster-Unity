@@ -19,12 +19,6 @@ public class BombControllerPlayModeTests
     [UnityTest]
     public IEnumerator AddBomb_IncreasesBombAmountAndRemaining()
     {
-        if (!Application.isPlaying)
-        {
-            Assert.Ignore(
-                "PlayMode test must be run from the PlayMode tab (or with -testPlatform playmode)."
-            );
-        }
         _playerGo = new GameObject("Player");
         var pc = _playerGo.AddComponent<PlayerController>();
         pc.playerId = 1;
@@ -42,12 +36,6 @@ public class BombControllerPlayModeTests
     [UnityTest]
     public IEnumerator IncreaseBlastRadius_IncrementsExplosionRadius()
     {
-        if (!Application.isPlaying)
-        {
-            Assert.Ignore(
-                "PlayMode test must be run from the PlayMode tab (or with -testPlatform playmode)."
-            );
-        }
         _playerGo = new GameObject("Player");
         _playerGo.AddComponent<PlayerController>();
         var bombController = _playerGo.AddComponent<BombController>();

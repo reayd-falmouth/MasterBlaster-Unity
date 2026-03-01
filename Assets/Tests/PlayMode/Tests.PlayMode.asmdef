@@ -1,0 +1,23 @@
+{
+    "name": "Tests.PlayMode",
+    "rootNamespace": "",
+    "references": [
+        "Assembly-CSharp",
+        "Scripts",
+        "UnityEngine",
+        "UnityEngine.TestRunner",
+        "UnityEditor",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
