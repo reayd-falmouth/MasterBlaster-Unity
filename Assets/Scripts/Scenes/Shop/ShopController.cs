@@ -37,6 +37,14 @@ namespace Scenes.Shop
             return index == selectedIndex ? "> " : "  ";
         }
 
+        /// <summary>
+        /// Returns the coin count to display for a player (from SessionManager). Used by RefreshCoinsDisplay and by tests.
+        /// </summary>
+        public static int GetCoinsToDisplayForPlayer(int playerId)
+        {
+            return SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
+        }
+
         private void Awake()
         {
             if (items != null && items.Length > 0)
@@ -49,9 +57,12 @@ namespace Scenes.Shop
             currentPlayer = 1; // start with Player 1
             // Only initialize SessionManager if not yet set (e.g. first time); do not wipe state between rounds
             if (
-                SessionManager.Instance.PlayerUpgrades == null
-                || SessionManager.Instance.PlayerUpgrades.Count == 0
-                || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)
+                SessionManager.Instance != null
+                && (
+                    SessionManager.Instance.PlayerUpgrades == null
+                    || SessionManager.Instance.PlayerUpgrades.Count == 0
+                    || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)
+                )
             )
             {
                 SessionManager.Instance.Initialize(playerCount);
@@ -135,16 +146,33 @@ namespace Scenes.Shop
             }
         }
 
+        /// <summary>
+        /// Clears the coin container and repopulates from SessionManager for the current player.
+        /// Uses DestroyImmediate so the display updates correctly when switching players (no deferred-destroy race).
+        /// </summary>
         void RefreshCoinsDisplay()
         {
-            // Clear old coins
-            foreach (Transform child in coinContainer)
-                Destroy(child.gameObject);
+            if (coinContainer == null)
+                return;
+            ClearCoinContainer();
+            RepopulateCoinsFromSession();
+        }
 
+        void ClearCoinContainer()
+        {
+            if (coinContainer == null)
+                return;
+            // Clear immediately so repopulate shows correct count for current player (avoids player 2 showing player 1's + own coins)
+            for (int i = coinContainer.childCount - 1; i >= 0; i--)
+                Object.DestroyImmediate(coinContainer.GetChild(i).gameObject);
+        }
+
+        void RepopulateCoinsFromSession()
+        {
+            if (coinContainer == null)
+                return;
             int playerId = currentPlayer;
-            int coins =
-                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
-
+            int coins = GetCoinsToDisplayForPlayer(playerId);
             for (int i = 0; i < coins; i++)
             {
                 var coinGO = new GameObject($"Coin{i}");
@@ -206,6 +234,11 @@ namespace Scenes.Shop
         {
             if (type == ShopItemType.Exit)
                 return;
+            if (SessionManager.Instance == null)
+            {
+                Debug.LogWarning("[ShopController] ApplyUpgrade skipped: SessionManager is null.");
+                return;
+            }
 
             int currentLevel = SessionManager.Instance.GetUpgradeLevel(playerId, type);
             int newLevel = ShopPurchaseLogic.GetNewLevelAfterPurchase(type, currentLevel);

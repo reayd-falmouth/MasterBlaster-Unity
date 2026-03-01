@@ -132,16 +132,13 @@ namespace Scenes.MainMenu
             PlayerPrefs.SetInt("NormalLevel", normalLevel ? 1 : 0);
             PlayerPrefs.SetInt("Gambling", gambling ? 1 : 0);
 
-            // Reset per-player progress (wins in PlayerPrefs; coins/upgrades in SessionManager)
-            for (int i = 1; i <= 5; i++)
-            {
-                PlayerPrefs.SetInt($"Player{i}_Wins", 0);
-            }
-
-            // Reset in-memory upgrade state for new game (SessionManager is source of truth for upgrades)
+            // Reset in-memory session state for new game (wins, coins, upgrades in SessionManager)
             // SessionManager may not exist in the Menu scene; it is created in Shop/Game. Guard so we don't throw and block SignalMenuStart().
             if (SessionManager.Instance != null)
                 SessionManager.Instance.Initialize(players);
+
+            // Only the first arena load (from menu) should give start money; Shop → Countdown → Game should not.
+            PlayerPrefs.SetInt("GiveStartMoneyNextArena", 1);
 
             PlayerPrefs.Save();
         }
