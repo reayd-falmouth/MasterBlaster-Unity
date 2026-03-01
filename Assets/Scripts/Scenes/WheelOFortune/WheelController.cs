@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -105,13 +105,14 @@ namespace Scenes.WheelOFortune
             // Final reward sound
             AudioController.I.PlayChaChing();
 
-            // Reward selected player with a coin
+            // Reward selected player with a coin (session-only, in SessionManager)
             int winningPlayer = stopIndex + 1;
-            int coins = PlayerPrefs.GetInt($"Player{winningPlayer}_Coins", 0);
-            PlayerPrefs.SetInt($"Player{winningPlayer}_Coins", coins + 1);
-            PlayerPrefs.Save();
-
-            Debug.Log($"Player {winningPlayer} wins a coin! Total: {coins + 1}");
+            if (SessionManager.Instance != null)
+            {
+                SessionManager.Instance.AddCoins(winningPlayer, 1);
+                int total = SessionManager.Instance.GetCoins(winningPlayer);
+                Debug.Log($"Player {winningPlayer} wins a coin! Total: {total}");
+            }
 
             // Wait before moving on
             yield return new WaitForSeconds(postSpinDelay);

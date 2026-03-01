@@ -182,6 +182,9 @@ namespace Scenes.Arena.Player
                 Debug.LogError("[PlayerController] Cannot apply upgrades: Player ID is invalid.");
                 return;
             }
+            // SessionManager may not exist in this scene (e.g. Game before Shop); treat as no upgrades
+            if (SessionManager.Instance == null)
+                return;
 
             // Reset player stats that are affected by stackable upgrades (like speed, bomb stats)
             // NOTE: You'll need to reset other stats here if they are affected by stackable upgrades.
@@ -189,8 +192,9 @@ namespace Scenes.Arena.Player
             // and this function is called on start/enable.
             speed = 5f;
 
-            // Coins
-            coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+            // Coins (session-only, from SessionManager)
+            coins =
+                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
 
             // ---------------------------------------------------------------------------------
             // 🔁 STACKABLE UPGRADES (PowerUp, ExtraBomb, SpeedUp)
@@ -322,8 +326,12 @@ namespace Scenes.Arena.Player
 
         public void AddCoin()
         {
-            coins++;
-            PlayerPrefs.SetInt($"Player{playerId}_Coins", coins);
+            if (SessionManager.Instance != null)
+                SessionManager.Instance.AddCoins(playerId, 1);
+            coins =
+                SessionManager.Instance != null
+                    ? SessionManager.Instance.GetCoins(playerId)
+                    : coins + 1;
             Debug.Log($"[PlayerController] Player {playerId} coins increased to {coins}");
         }
 

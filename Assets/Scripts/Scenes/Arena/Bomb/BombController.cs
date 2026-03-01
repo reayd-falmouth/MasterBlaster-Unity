@@ -249,6 +249,8 @@ namespace Scenes.Arena.Bomb
 
         public void ApplyUpgrades(int playerId)
         {
+            if (Core.SessionManager.Instance == null)
+                return;
             // Reset to base values first
             bombsRemaining = bombAmount;
             timeBomb = false;

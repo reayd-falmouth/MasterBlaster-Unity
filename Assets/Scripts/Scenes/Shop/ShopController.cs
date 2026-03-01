@@ -142,7 +142,8 @@ namespace Scenes.Shop
                 Destroy(child.gameObject);
 
             int playerId = currentPlayer;
-            int coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+            int coins =
+                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
 
             for (int i = 0; i < coins; i++)
             {
@@ -178,19 +179,20 @@ namespace Scenes.Shop
                 return;
             }
 
-            // Normal purchase flow
+            // Normal purchase flow (coins in SessionManager)
             int playerId = currentPlayer;
-            int coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+            int coins =
+                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
 
             if (ShopPurchaseLogic.CanAfford(coins, item.cost))
             {
                 coins -= item.cost;
-                PlayerPrefs.SetInt($"Player{playerId}_Coins", coins);
+                if (SessionManager.Instance != null)
+                    SessionManager.Instance.SetCoins(playerId, coins);
                 AudioController.I.PlayBuy();
 
                 ApplyUpgrade(playerId, item.type);
 
-                PlayerPrefs.Save();
                 Debug.Log($"Player {playerId} bought {item.name}!");
             }
             else

@@ -10,7 +10,7 @@ EditMode tests live in **EditMode/**.
 |-----------|-----------|
 | `Core/SceneNamesConfig` | EditMode/SceneNamesConfigTests.cs |
 | `Core/SceneFlowMapper` | EditMode/SceneFlowMapperTests.cs |
-| `Core/SessionManager` (upgrade state is session-only; shop and arena use it for upgrades) | EditMode/SessionManagerTests.cs |
+| `Core/SessionManager` (upgrades and coins session-only; shop and arena use it) | EditMode/SessionManagerTests.cs |
 | `Scenes/Shop/ShopItemTypeExtensions`, `ShopItemType` | EditMode/ShopItemExtensionsTests.cs |
 | `Scenes/Shop/ShopPurchaseLogic` | EditMode/ShopPurchaseLogicTests.cs |
 | `Scenes/Shop/ShopController` (GetPointerTextForIndex) | EditMode/ShopControllerTests.cs |

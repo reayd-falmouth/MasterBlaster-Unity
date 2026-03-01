@@ -43,6 +43,11 @@ namespace Scenes.Arena.Player.Abilities
 
         private void ApplyUpgrades()
         {
+            if (SessionManager.Instance == null)
+            {
+                active = false;
+                return;
+            }
             var playerId = pc.playerId;
             active = SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Superman) == 1;
             Debug.Log($"[PlayerController] Player {playerId} superman applied.");

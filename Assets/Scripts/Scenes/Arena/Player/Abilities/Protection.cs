@@ -40,6 +40,11 @@ namespace Scenes.Arena.Player.Abilities
 
         void ApplyUpgrades()
         {
+            if (SessionManager.Instance == null)
+            {
+                active = false;
+                return;
+            }
             var playerId = pc.playerId;
             active =
                 SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Protection) == 1;
