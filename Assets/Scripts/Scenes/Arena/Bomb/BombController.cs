@@ -178,20 +178,27 @@ namespace Scenes.Arena.Bomb
             position.x = Mathf.Round(position.x);
             position.y = Mathf.Round(position.y);
 
-            // center fire – play explosion sound on this instance only
+            activeBombs.Remove(bomb);
+            Destroy(bomb);
+            bombsRemaining++;
+
+            // Center fire – play explosion sound on this instance only
             Explosion explosion = Instantiate(explosionPrefab, position, Quaternion.identity);
             explosion.PlayExplosionSound();
             explosion.DestroyAfter(explosionDuration);
 
-            // propagate
+            // Defer propagation to next frame to avoid stack overflow when two bombs chain
+            StartCoroutine(ExplodeBombPropagateNextFrame(position));
+        }
+
+        private IEnumerator ExplodeBombPropagateNextFrame(Vector2 position)
+        {
+            yield return null;
+
             Explode(position, Vector2.up, explosionRadius, explosionDelay);
             Explode(position, Vector2.down, explosionRadius, explosionDelay);
             Explode(position, Vector2.left, explosionRadius, explosionDelay);
             Explode(position, Vector2.right, explosionRadius, explosionDelay);
-
-            activeBombs.Remove(bomb);
-            Destroy(bomb);
-            bombsRemaining++;
         }
 
         private void ClearDestructible(Vector2 position)
