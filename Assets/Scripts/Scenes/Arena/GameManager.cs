@@ -55,42 +55,31 @@ namespace Scenes.Arena
 
         void SetupPlayers(int count)
         {
-            // Turn all off first
             topLeftPlayer.SetActive(false);
             topRightPlayer.SetActive(false);
             bottomLeftPlayer.SetActive(false);
             bottomRightPlayer.SetActive(false);
             middlePlayer.SetActive(false);
 
-            int id = 1;
-
-            switch (count)
+            var setup = ArenaLogic.GetPlayerSetup(count);
+            foreach (var (slot, playerId) in setup)
             {
-                case 2:
-                    EnablePlayer(topLeftPlayer, id++);
-                    EnablePlayer(bottomRightPlayer, id++);
-                    break;
+                var playerObj = GetPlayerObject(slot);
+                if (playerObj != null)
+                    EnablePlayer(playerObj, playerId);
+            }
+        }
 
-                case 3:
-                    EnablePlayer(topLeftPlayer, id++);
-                    EnablePlayer(bottomRightPlayer, id++);
-                    EnablePlayer(middlePlayer, id++);
-                    break;
-
-                case 4:
-                    EnablePlayer(topLeftPlayer, id++);
-                    EnablePlayer(topRightPlayer, id++);
-                    EnablePlayer(bottomLeftPlayer, id++);
-                    EnablePlayer(bottomRightPlayer, id++);
-                    break;
-
-                case 5:
-                    EnablePlayer(topLeftPlayer, id++);
-                    EnablePlayer(topRightPlayer, id++);
-                    EnablePlayer(bottomLeftPlayer, id++);
-                    EnablePlayer(bottomRightPlayer, id++);
-                    EnablePlayer(middlePlayer, id++);
-                    break;
+        GameObject GetPlayerObject(PlayerSlot slot)
+        {
+            switch (slot)
+            {
+                case PlayerSlot.TopLeft:     return topLeftPlayer;
+                case PlayerSlot.TopRight:     return topRightPlayer;
+                case PlayerSlot.BottomLeft:  return bottomLeftPlayer;
+                case PlayerSlot.BottomRight: return bottomRightPlayer;
+                case PlayerSlot.Middle:      return middlePlayer;
+                default:                     return null;
             }
         }
 
@@ -104,44 +93,45 @@ namespace Scenes.Arena
         
         public void CheckWinState()
         {
-            int aliveCount = 0;
-            GameObject lastAlive = null;
+            if (players == null || players.Length == 0) return;
 
+            var playerActive = new bool[players.Length];
+            int currentWinsOfLastAlive = 0;
             for (int i = 0; i < players.Length; i++)
             {
+                playerActive[i] = players[i].activeSelf;
                 if (players[i].activeSelf)
                 {
-                    aliveCount++;
-                    lastAlive = players[i];
+                    var pc = players[i].GetComponent<PlayerController>();
+                    if (pc != null) currentWinsOfLastAlive = pc.wins;
                 }
             }
 
-            if (aliveCount <= 1)
+            int winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
+            var result = ArenaLogic.EvaluateWinState(playerActive, currentWinsOfLastAlive, winsNeeded);
+
+            if (result.Outcome == WinOutcome.NoChange) return;
+
+            if (result.LastAliveIndex.HasValue)
             {
-                if (lastAlive != null)
+                var lastAlive = players[result.LastAliveIndex.Value];
+                var movement = lastAlive.GetComponent<PlayerController>();
+                if (movement != null)
                 {
-                    var movement = lastAlive.GetComponent<PlayerController>();
-                    if (movement != null)
+                    movement.wins++;
+                    PlayerPrefs.SetInt(lastAlive.name + "_Wins", movement.wins);
+                    PlayerPrefs.Save();
+                    if (result.Outcome == WinOutcome.GoToOvers)
                     {
-                        movement.wins++;
-                        PlayerPrefs.SetInt(lastAlive.name + "_Wins", movement.wins);
+                        PlayerPrefs.SetString("WinnerName", lastAlive.name);
                         PlayerPrefs.Save();
-
-                        int winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
-                        if (movement.wins >= winsNeeded)
-                        {
-                            // Store winner name for display later
-                            PlayerPrefs.SetString("WinnerName", lastAlive.name);
-                            PlayerPrefs.Save();
-
-                            SceneFlowManager.I.GoToOvers();
-                            return;
-                        }
+                        SceneFlowManager.I.GoToOvers();
+                        return;
                     }
                 }
-
-                Invoke(nameof(Standings), 3f);
             }
+
+            Invoke(nameof(Standings), 3f);
         }
     
         private void Standings()

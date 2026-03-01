@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 using Utilities;
 
@@ -93,33 +93,22 @@ namespace Core
             SceneManager.LoadScene(SceneFor(next), LoadSceneMode.Single);
         }
 
-        string SceneFor(FlowState s) => s switch
+        SceneNamesConfig GetConfig() => new SceneNamesConfig
         {
-            FlowState.Credits    => creditsScene,
-            FlowState.Title      => titleScene,
-            FlowState.Menu       => menuScene,
-            FlowState.Countdown  => countdownScene,
-            FlowState.Game       => gameScene,
-            FlowState.Standings  => standingsScene,
-            FlowState.Wheel      => wheelScene,
-            FlowState.Shop       => shopScene,
-            FlowState.Overs      => oversScene,
-            _ => menuScene
+            Credits = creditsScene,
+            Title = titleScene,
+            Menu = menuScene,
+            Countdown = countdownScene,
+            Game = gameScene,
+            Standings = standingsScene,
+            Wheel = wheelScene,
+            Shop = shopScene,
+            Overs = oversScene
         };
 
-        public FlowState StateForSceneName(string n)
-        {
-            if (n == creditsScene)   return FlowState.Credits;
-            if (n == titleScene)     return FlowState.Title;
-            if (n == menuScene)      return FlowState.Menu;
-            if (n == countdownScene) return FlowState.Countdown;
-            if (n == gameScene)      return FlowState.Game;
-            if (n == standingsScene) return FlowState.Standings;
-            if (n == wheelScene)     return FlowState.Wheel;
-            if (n == shopScene)      return FlowState.Shop;
-            if (n == oversScene)      return FlowState.Overs;
-            return FlowState.Menu;
-        }
+        string SceneFor(FlowState s) => SceneFlowMapper.SceneFor(s, GetConfig());
+
+        public FlowState StateForSceneName(string n) => SceneFlowMapper.StateForSceneName(n, GetConfig());
     
         public void GoToOvers()
         {
