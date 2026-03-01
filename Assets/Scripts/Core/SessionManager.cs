@@ -2,16 +2,15 @@
 using Scenes.Shop;
 using Utilities;
 
-
 namespace Core
 {
-    public class SessionManager:  PersistentSingleton<SessionManager>
+    public class SessionManager : PersistentSingleton<SessionManager>
     {
         // Key: Player ID (int)
         // Value: Dictionary of Upgrade Type (ShopItemType) and its Level/State (int)
-        public Dictionary<int, Dictionary<ShopItemType, int>> PlayerUpgrades = 
+        public Dictionary<int, Dictionary<ShopItemType, int>> PlayerUpgrades =
             new Dictionary<int, Dictionary<ShopItemType, int>>();
-        
+
         // 3. Setup/Cleanup Method
         public void Initialize(int playerCount)
         {
@@ -20,7 +19,7 @@ namespace Core
             {
                 // Initialize each player with a dictionary to store their upgrades
                 PlayerUpgrades[id] = new Dictionary<ShopItemType, int>();
-            
+
                 // Set all upgrades to 0 initially
                 foreach (ShopItemType type in System.Enum.GetValues(typeof(ShopItemType)))
                 {
@@ -29,7 +28,7 @@ namespace Core
                 }
             }
         }
-    
+
         // 4. Accessor/Mutator Method
         public int GetUpgradeLevel(int playerId, ShopItemType type)
         {

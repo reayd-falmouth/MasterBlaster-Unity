@@ -7,7 +7,8 @@ namespace Utilities
     /// Singleton class
     /// </summary>
     /// <typeparam name="T">Type of the singleton</typeparam>
-    public abstract class Singleton<T> : MonoBehaviour where T : Singleton<T>
+    public abstract class Singleton<T> : MonoBehaviour
+        where T : Singleton<T>
     {
         private static T s_instance;
 
@@ -16,20 +17,17 @@ namespace Utilities
         /// </summary>
         public static T Instance
         {
-            get
-            {
-                return s_instance;
-            }
-            protected set
-            {
-                s_instance = value;
-            }
+            get { return s_instance; }
+            protected set { s_instance = value; }
         }
-    
+
         /// <summary>
         /// Gets whether an instance of this singleton exists
         /// </summary>
-        public static bool s_InstanceExists { get { return s_instance != null; } }
+        public static bool s_InstanceExists
+        {
+            get { return s_instance != null; }
+        }
 
         public static event Action InstanceSet;
 

@@ -49,7 +49,8 @@ namespace Core
 
         public void StartAnimation()
         {
-            if (animating) return;
+            if (animating)
+                return;
             animating = true;
             InvokeRepeating(nameof(NextFrame), animationTime, animationTime);
         }
@@ -63,17 +64,22 @@ namespace Core
 
         private void NextFrame()
         {
-            if (!animating) return;
+            if (!animating)
+                return;
 
             animationFrame++;
 
-            if (loop && animationFrame >= animationSprites.Length) {
+            if (loop && animationFrame >= animationSprites.Length)
+            {
                 animationFrame = 0;
             }
 
-            if (idle) {
+            if (idle)
+            {
                 spriteRenderer.sprite = idleSprite;
-            } else if (animationFrame >= 0 && animationFrame < animationSprites.Length) {
+            }
+            else if (animationFrame >= 0 && animationFrame < animationSprites.Length)
+            {
                 spriteRenderer.sprite = animationSprites[animationFrame];
             }
         }

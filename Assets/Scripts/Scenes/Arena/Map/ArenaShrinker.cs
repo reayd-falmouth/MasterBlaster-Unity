@@ -4,6 +4,7 @@ using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+
 // AudioController
 
 // SceneFlowManager etc.
@@ -17,58 +18,86 @@ namespace Scenes.Arena.Map
         // -------------------- Timer & Alarm --------------------
         [Header("Timer")]
         [Tooltip("Only run timer/alarm/shrinking when enabled.")]
-        [SerializeField] private bool shrinkingEnabled = true;
+        [SerializeField]
+        private bool shrinkingEnabled = true;
 
         [Tooltip("Total match length (seconds).")]
-        [SerializeField] private float matchDuration = 180f; // 3:00
+        [SerializeField]
+        private float matchDuration = 180f; // 3:00
 
-        [Tooltip("When remaining time <= this fraction, alarm starts & background pulses (e.g. 0.10 = last 10%).")]
-        [SerializeField] private float alarmThresholdFraction = 0.10f;
+        [Tooltip(
+            "When remaining time <= this fraction, alarm starts & background pulses (e.g. 0.10 = last 10%)."
+        )]
+        [SerializeField]
+        private float alarmThresholdFraction = 0.10f;
 
         [Tooltip("When remaining time <= this fraction, shrinking starts (e.g. 0.05 = last 5%).")]
-        [SerializeField] private float shrinkThresholdFraction = 0.05f;
+        [SerializeField]
+        private float shrinkThresholdFraction = 0.05f;
 
         [Tooltip("Start timer automatically on Start().")]
-        [SerializeField] private bool autoStartTimer = true;
+        [SerializeField]
+        private bool autoStartTimer = true;
 
         [Header("Alarm Visuals")]
-        [SerializeField] private Camera targetCamera;
-        [SerializeField] private Color alarmColor = Color.red;
-        [SerializeField] private float pulseSpeed = 5f; // sin speed
-        [SerializeField] private float alarmRepeatSeconds = 1.0f; // fallback loop via PlayAlarm()
+        [SerializeField]
+        private Camera targetCamera;
+
+        [SerializeField]
+        private Color alarmColor = Color.red;
+
+        [SerializeField]
+        private float pulseSpeed = 5f; // sin speed
+
+        [SerializeField]
+        private float alarmRepeatSeconds = 1.0f; // fallback loop via PlayAlarm()
 
         // --- Timer & Alarm (existing fields stay the same) ---
 
         [Header("Local Siren (scene-scoped)")]
-        [SerializeField] private AudioSource alarmSource;
+        [SerializeField]
+        private AudioSource alarmSource;
 
-        private AudioSource sirenSource;   // local to Arena; dies with the scene
+        private AudioSource sirenSource; // local to Arena; dies with the scene
+
         // -------------------- Shrinking --------------------
         [Header("Shrinking")]
         [Tooltip("Prefab to spawn for each indestructible block.")]
-        [SerializeField] private GameObject indestructiblePrefab;
+        [SerializeField]
+        private GameObject indestructiblePrefab;
 
         [Tooltip("Tilemap with the OUTER WALL. We compute inside-of-wall bounds from this.")]
-        [SerializeField] private Tilemap indestructiblesTilemap; // usually child: "Indestructibles"
+        [SerializeField]
+        private Tilemap indestructiblesTilemap; // usually child: "Indestructibles"
 
         [Tooltip("Tilemap that holds destructible tiles. Optional—clears tiles as wall advances.")]
-        [SerializeField] private Tilemap destructiblesTilemap;   // usually child: "Destructibles"
+        [SerializeField]
+        private Tilemap destructiblesTilemap; // usually child: "Destructibles"
 
         [Tooltip("Delay between placing each block (snake speed).")]
-        [SerializeField] private float shrinkDelay = 0.08f;
+        [SerializeField]
+        private float shrinkDelay = 0.08f;
 
         [Tooltip("2D overlap size used to resolve bombs/items/players under each new block.")]
-        [SerializeField] private Vector2 overlapBoxSize = new Vector2(0.9f, 0.9f);
+        [SerializeField]
+        private Vector2 overlapBoxSize = new Vector2(0.9f, 0.9f);
 
-        [SerializeField] private LayerMask overlapMask = ~0;
+        [SerializeField]
+        private LayerMask overlapMask = ~0;
 
         [Header("Auto-Detect Children By Name (optional)")]
-        [SerializeField] private string indestructiblesName = "Indestructibles";
-        [SerializeField] private string destructiblesName   = "Destructibles";
+        [SerializeField]
+        private string indestructiblesName = "Indestructibles";
+
+        [SerializeField]
+        private string destructiblesName = "Destructibles";
 
         [Header("Debug")]
-        [SerializeField] private bool drawGizmos;
-        [SerializeField] private Color gizmoColor = new Color(1f, 0.3f, 0.2f, 0.35f);
+        [SerializeField]
+        private bool drawGizmos;
+
+        [SerializeField]
+        private Color gizmoColor = new Color(1f, 0.3f, 0.2f, 0.35f);
 
         // internal state
         private float timeRemaining;
@@ -80,7 +109,10 @@ namespace Scenes.Arena.Map
         private Coroutine alarmLoopCo;
 
         // shrink bounds (inclusive)
-        private int minX, maxX, minY, maxY;
+        private int minX,
+            maxX,
+            minY,
+            maxY;
 
         void Awake()
         {
@@ -88,8 +120,10 @@ namespace Scenes.Arena.Map
             if (PlayerPrefs.HasKey("Shrinking"))
                 shrinkingEnabled = PlayerPrefs.GetInt("Shrinking", 1) == 1;
 
-            if (!targetCamera) targetCamera = Camera.main;
-            if (targetCamera) originalBg = targetCamera.backgroundColor;
+            if (!targetCamera)
+                targetCamera = Camera.main;
+            if (targetCamera)
+                originalBg = targetCamera.backgroundColor;
 
             if (!indestructiblesTilemap)
             {
@@ -130,7 +164,8 @@ namespace Scenes.Arena.Map
         // -------------------- Public API --------------------
         public void StartTimer()
         {
-            if (!shrinkingEnabled || timerRunning) return;
+            if (!shrinkingEnabled || timerRunning)
+                return;
             timeRemaining = Mathf.Max(1f, matchDuration);
             timerRunning = true;
             StartCoroutine(TimerRoutine());
@@ -140,13 +175,14 @@ namespace Scenes.Arena.Map
         {
             timerRunning = false;
             StopAlarm();
-            if (targetCamera) targetCamera.backgroundColor = originalBg;
+            if (targetCamera)
+                targetCamera.backgroundColor = originalBg;
         }
 
         // -------------------- Internals --------------------
         private IEnumerator TimerRoutine()
         {
-            float alarmTime  = matchDuration * Mathf.Clamp01(alarmThresholdFraction);
+            float alarmTime = matchDuration * Mathf.Clamp01(alarmThresholdFraction);
             float shrinkTime = matchDuration * Mathf.Clamp01(shrinkThresholdFraction);
 
             while (timerRunning && timeRemaining > 0f)
@@ -167,7 +203,8 @@ namespace Scenes.Arena.Map
 
             // timer expired
             StopAlarm();
-            if (targetCamera) targetCamera.backgroundColor = originalBg;
+            if (targetCamera)
+                targetCamera.backgroundColor = originalBg;
 
             if (!endingTriggered)
             {
@@ -176,10 +213,11 @@ namespace Scenes.Arena.Map
                 SceneFlowManager.I.GoTo(FlowState.Standings);
             }
         }
-        
+
         public void StartAlarm()
         {
-            if (alarmSource == null) return;
+            if (alarmSource == null)
+                return;
             if (!alarmSource.isPlaying)
             {
                 alarmSource.volume = 0.8f;
@@ -195,10 +233,12 @@ namespace Scenes.Arena.Map
                 alarmSource.Stop();
             }
         }
-        
+
         // ------------ Shrinking (clockwise snake, inside border) ------------
         // How many cells to step inside from the outer wall (usually 1)
-        [SerializeField] private int inset = 1;
+        [SerializeField]
+        private int inset = 1;
+
         private void ComputeInsideBounds()
         {
             if (!indestructiblesTilemap)
@@ -217,20 +257,31 @@ namespace Scenes.Arena.Map
             maxY = b.yMax - inset - 1;
 
             // Safety clamp
-            if (minX > maxX) { int mid = (minX + maxX) / 2; minX = maxX = mid; }
-            if (minY > maxY) { int mid = (minY + maxY) / 2; minY = maxY = mid; }
+            if (minX > maxX)
+            {
+                int mid = (minX + maxX) / 2;
+                minX = maxX = mid;
+            }
+            if (minY > maxY)
+            {
+                int mid = (minY + maxY) / 2;
+                minY = maxY = mid;
+            }
 
-            Debug.Log($"[ArenaShrinker] Inside bounds from compressed Tilemap: X:{minX}..{maxX}  Y:{minY}..{maxY}  (cellBounds: {b})");
+            Debug.Log(
+                $"[ArenaShrinker] Inside bounds from compressed Tilemap: X:{minX}..{maxX}  Y:{minY}..{maxY}  (cellBounds: {b})"
+            );
         }
-        
+
         private IEnumerator ShrinkRoutine()
         {
-            if (!indestructiblesTilemap || !indestructiblePrefab) yield break;
+            if (!indestructiblesTilemap || !indestructiblePrefab)
+                yield break;
 
-            int left   = minX;
-            int right  = maxX;
+            int left = minX;
+            int right = maxX;
             int bottom = minY;
-            int top    = maxY;
+            int top = maxY;
 
             while (left <= right && bottom <= top)
             {
@@ -250,7 +301,8 @@ namespace Scenes.Arena.Map
                 }
                 right--;
 
-                if (bottom > top || left > right) break;
+                if (bottom > top || left > right)
+                    break;
 
                 // bottom row (right -> left)
                 for (int x = right; x >= left; x--)
@@ -280,12 +332,13 @@ namespace Scenes.Arena.Map
             var hits = Physics2D.OverlapBoxAll(worldCenter, overlapBoxSize, 0f, overlapMask);
             foreach (var h in hits)
             {
-                if (!h) continue;
+                if (!h)
+                    continue;
 
                 var rbc = h.GetComponent<RemoteBombController>();
                 if (rbc != null)
                 {
-                    rbc.Detonate();                               // preferred path
+                    rbc.Detonate(); // preferred path
                     continue;
                 }
                 if (h.CompareTag("Item") || h.GetComponent<Destructible>() != null)
@@ -301,7 +354,12 @@ namespace Scenes.Arena.Map
             }
 
             // 2) Spawn the new indestructible block
-            var go = Instantiate(indestructiblePrefab, worldCenter, Quaternion.identity, indestructiblesTilemap.transform);
+            var go = Instantiate(
+                indestructiblePrefab,
+                worldCenter,
+                Quaternion.identity,
+                indestructiblesTilemap.transform
+            );
 
             // 3) Play its SFX
             var src = go.GetComponent<AudioSource>();
@@ -318,7 +376,8 @@ namespace Scenes.Arena.Map
         // ---- Debug gizmo for inside bounds ----
         void OnDrawGizmosSelected()
         {
-            if (!drawGizmos || !indestructiblesTilemap) return;
+            if (!drawGizmos || !indestructiblesTilemap)
+                return;
 
             Vector3 a = indestructiblesTilemap.GetCellCenterWorld(new Vector3Int(minX, minY, 0));
             Vector3 b = indestructiblesTilemap.GetCellCenterWorld(new Vector3Int(maxX, maxY, 0));

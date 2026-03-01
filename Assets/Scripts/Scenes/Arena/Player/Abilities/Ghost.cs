@@ -9,9 +9,12 @@ namespace Scenes.Arena.Player.Abilities
     public class Ghost : MonoBehaviour
     {
         [Header("Config")]
-        [SerializeField] private float defaultDuration = 15f;
-        [SerializeField] private AnimatedSpriteRenderer spriteRendererGhost;
-        
+        [SerializeField]
+        private float defaultDuration = 15f;
+
+        [SerializeField]
+        private AnimatedSpriteRenderer spriteRendererGhost;
+
         private PlayerController pc;
         private bool active;
         private float timer;
@@ -21,25 +24,26 @@ namespace Scenes.Arena.Player.Abilities
         {
             pc = GetComponentInParent<PlayerController>();
         }
-        
+
         private void Start()
         {
             ApplyUpgrades();
         }
-        
+
         private void Update()
         {
-            if (!active) return;
+            if (!active)
+                return;
 
             timer -= Time.deltaTime;
             if (timer <= 0f && endCo == null)
                 endCo = StartCoroutine(EndRoutine());
         }
-        
+
         void ApplyUpgrades()
         {
             var playerId = pc.playerId;
-            active      = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Ghost}", 0) == 1;
+            active = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Ghost}", 0) == 1;
             Debug.Log($"[PlayerController] Player {playerId} ghost applied.");
         }
 
@@ -53,10 +57,18 @@ namespace Scenes.Arena.Player.Abilities
             pc.visualOverrideActive = true;
             pc.visualOverrideRenderer = spriteRendererGhost;
             pc.UpdateVisualState(); // force refresh
-            
+
             // Ignore collisions
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Destructible"), true);
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Bomb"), true);
+            Physics2D.IgnoreLayerCollision(
+                LayerMask.NameToLayer("Player"),
+                LayerMask.NameToLayer("Destructible"),
+                true
+            );
+            Physics2D.IgnoreLayerCollision(
+                LayerMask.NameToLayer("Player"),
+                LayerMask.NameToLayer("Bomb"),
+                true
+            );
         }
 
         private IEnumerator EndRoutine()
@@ -64,17 +76,31 @@ namespace Scenes.Arena.Player.Abilities
             active = false;
 
             // Restore collisions
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Destructible"), false);
-            Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Bomb"), false);
+            Physics2D.IgnoreLayerCollision(
+                LayerMask.NameToLayer("Player"),
+                LayerMask.NameToLayer("Destructible"),
+                false
+            );
+            Physics2D.IgnoreLayerCollision(
+                LayerMask.NameToLayer("Player"),
+                LayerMask.NameToLayer("Bomb"),
+                false
+            );
 
             // Clear override → back to normal visuals
             pc.visualOverrideActive = false;
             pc.visualOverrideRenderer = null;
             pc.SetVisualState(PlayerController.PlayerVisualState.Normal);
             spriteRendererGhost.StopAnimation();
-            
+
             // Safety check
-            if (Physics2D.OverlapCircle(transform.position, 0.1f, LayerMask.GetMask("Destructible", "Bomb")))
+            if (
+                Physics2D.OverlapCircle(
+                    transform.position,
+                    0.1f,
+                    LayerMask.GetMask("Destructible", "Bomb")
+                )
+            )
                 pc.ApplyDeath();
 
             yield return null;

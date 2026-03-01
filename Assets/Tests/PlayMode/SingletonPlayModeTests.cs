@@ -1,0 +1,55 @@
+using System.Collections;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using Utilities;
+
+public class SingletonPlayModeTests
+{
+    private GameObject _gameObject;
+
+    [TearDown]
+    public void TearDown()
+    {
+        if (_gameObject != null)
+            Object.DestroyImmediate(_gameObject);
+    }
+
+    [UnityTest]
+    public IEnumerator PersistentSingleton_AfterAddComponent_InstanceIsSetAndExists()
+    {
+        _gameObject = new GameObject("PersistentSingletonTest");
+        var singleton = _gameObject.AddComponent<TestPersistentSingleton>();
+
+        // Yield enough frames for Awake (and base Awake/DontDestroyOnLoad) to run in Play Mode
+        yield return null;
+        yield return null;
+
+        Assert.That(TestPersistentSingleton.Instance, Is.Not.Null);
+        Assert.That(TestPersistentSingleton.Instance, Is.SameAs(singleton));
+        Assert.That(TestPersistentSingleton.s_InstanceExists, Is.True);
+    }
+
+    [UnityTest]
+    public IEnumerator PersistentSingleton_AfterDestroy_InstanceIsNull()
+    {
+        _gameObject = new GameObject("PersistentSingletonTest");
+        _gameObject.AddComponent<TestPersistentSingleton>();
+
+        yield return null;
+        yield return null;
+
+        Assert.That(TestPersistentSingleton.s_InstanceExists, Is.True);
+
+        Object.DestroyImmediate(_gameObject);
+        _gameObject = null;
+
+        yield return null;
+        yield return null;
+
+        Assert.That(TestPersistentSingleton.Instance, Is.Null);
+        Assert.That(TestPersistentSingleton.s_InstanceExists, Is.False);
+    }
+
+    private class TestPersistentSingleton : PersistentSingleton<TestPersistentSingleton> { }
+}

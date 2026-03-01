@@ -7,21 +7,21 @@ namespace Scenes.Standings
     public class StandingsController : MonoBehaviour
     {
         [Header("UI References")]
-        public Transform standingsPanel;       // Vertical Layout
-        public GameObject playerRowPrefab;     // Prefab with Avatar + TrophyContainer
+        public Transform standingsPanel; // Vertical Layout
+        public GameObject playerRowPrefab; // Prefab with Avatar + TrophyContainer
         public Sprite trophySprite;
 
         [Header("Avatars")]
-        public Sprite[] avatarSprites;         // 5 sprites, one per player
+        public Sprite[] avatarSprites; // 5 sprites, one per player
 
         [Header("Flow Settings")]
         [Tooltip("How long the standings screen stays active before advancing")]
-        public float autoAdvanceDelay = 3f;    // configurable in inspector
+        public float autoAdvanceDelay = 3f; // configurable in inspector
 
         private void Start()
         {
             // 1. Play opening sound
-            AudioController.I.PlayOhLaLa();  // fixed to match AudioController method
+            AudioController.I.PlayOhLaLa(); // fixed to match AudioController method
 
             // 2. Clear out any old rows
             foreach (Transform child in standingsPanel)

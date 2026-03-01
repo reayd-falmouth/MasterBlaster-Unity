@@ -1,0 +1,64 @@
+#!/bin/sh
+# Pre-commit hook: run C# linting (CSharpier) and Unity EditMode tests.
+# Enable with: git config core.hooksPath .githooks
+
+set -e
+cd "$(git rev-parse --show-toplevel)"
+
+echo "=== Lint (CSharpier) ==="
+dotnet tool restore
+if ! dotnet dotnet-csharpier --check Assets/; then
+  echo "Lint failed. Fix with: dotnet dotnet-csharpier Assets/"
+  exit 1
+fi
+
+echo "=== Unity EditMode tests ==="
+if [ -n "$SKIP_UNITY_TESTS" ]; then
+  echo "Skipping tests (SKIP_UNITY_TESTS is set)."
+  exit 0
+fi
+
+# Find Unity: use UNITY_EDITOR_PATH or common install paths
+UNITY_EXE=""
+if [ -n "$UNITY_EDITOR_PATH" ]; then
+  UNITY_EXE="$UNITY_EDITOR_PATH"
+elif [ -n "$UNITY_HOME" ]; then
+  UNITY_EXE="$UNITY_HOME/Unity.exe"
+fi
+
+# Windows (Git Bash): try Hub path; read version from ProjectVersion.txt
+if [ -z "$UNITY_EXE" ] && [ -f "ProjectSettings/ProjectVersion.txt" ]; then
+  VERSION=$(sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '\r')
+  for base in "/c/Program Files/Unity/Hub/Editor" "/d/Program Files/Unity/Hub/Editor"; do
+    if [ -f "$base/$VERSION/Editor/Unity.exe" ]; then
+      UNITY_EXE="$base/$VERSION/Editor/Unity.exe"
+      break
+    fi
+  done
+fi
+
+# macOS
+if [ -z "$UNITY_EXE" ] && [ -d "/Applications/Unity/Hub/Editor" ]; then
+  VERSION=$(sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt 2>/dev/null | tr -d '\r')
+  if [ -n "$VERSION" ] && [ -d "/Applications/Unity/Hub/Editor/$VERSION/Unity.app" ]; then
+    UNITY_EXE="/Applications/Unity/Hub/Editor/$VERSION/Unity.app/Contents/MacOS/Unity"
+  fi
+fi
+
+if [ -z "$UNITY_EXE" ] || ! [ -f "$UNITY_EXE" ]; then
+  echo "Unity not found. Set UNITY_EDITOR_PATH (or UNITY_HOME) to run tests locally. CI will run tests."
+  exit 0
+fi
+
+PROJECT_PATH="$(pwd)"
+RESULTS="$PROJECT_PATH/TestResults-editmode.xml"
+rm -f "$RESULTS"
+
+if "$UNITY_EXE" -runTests -batchmode -projectPath "$PROJECT_PATH" -testResults "$RESULTS" -testPlatform EditMode -quit; then
+  echo "Tests passed."
+  rm -f "$RESULTS"
+  exit 0
+else
+  echo "Unity tests failed. See $RESULTS if present."
+  exit 1
+fi

@@ -18,7 +18,7 @@ namespace Scenes.Arena.Bomb
         private int bombsRemaining;
         public bool timeBomb = false;
         public bool remoteBomb = false;
-    
+
         [Header("Explosion")]
         public Explosion explosionPrefab;
         public LayerMask explosionLayerMask;
@@ -31,27 +31,33 @@ namespace Scenes.Arena.Bomb
         public Destructible destructiblePrefab;
 
         private readonly List<GameObject> activeBombs = new List<GameObject>();
-        
+
         private void Update()
         {
-            if (bombsRemaining <= 0) return;
+            if (bombsRemaining <= 0)
+                return;
 
             if (Input.GetKeyDown(inputKey))
             {
                 GameObject bomb = SpawnBomb();
-                if (bomb == null) return;
+                if (bomb == null)
+                    return;
 
                 var player = GetComponent<PlayerController>();
-                var brain  = bomb.GetComponent<RemoteBombController>();
+                var brain = bomb.GetComponent<RemoteBombController>();
 
-                var mode = remoteBomb ? RemoteBombController.BombMode.Remote
-                    : (timeBomb ? RemoteBombController.BombMode.Time
-                        : RemoteBombController.BombMode.Fuse);
+                var mode = remoteBomb
+                    ? RemoteBombController.BombMode.Remote
+                    : (
+                        timeBomb
+                            ? RemoteBombController.BombMode.Time
+                            : RemoteBombController.BombMode.Fuse
+                    );
 
                 brain.Init(player, this, mode, inputKey, bombFuseTime);
             }
         }
-        
+
         /// <summary>
         /// Spawns a bomb at the player’s grid cell and returns it.
         /// Handles destructible blocking and duplicate checks.
@@ -63,7 +69,8 @@ namespace Scenes.Arena.Bomb
             position.y = Mathf.Round(position.y);
 
             Vector3Int cell = destructibleTiles.WorldToCell(position);
-            if (destructibleTiles.GetTile(cell) != null) return null;
+            if (destructibleTiles.GetTile(cell) != null)
+                return null;
 
             foreach (var b in activeBombs)
                 if (b != null && (Vector2)b.transform.position == position)
@@ -75,13 +82,23 @@ namespace Scenes.Arena.Bomb
 
             return bomb;
         }
-        
-        public void Explode(Vector2 position, Vector2 direction, int length, float delayStep = 0.05f)
+
+        public void Explode(
+            Vector2 position,
+            Vector2 direction,
+            int length,
+            float delayStep = 0.05f
+        )
         {
             StartCoroutine(ExplodeCoroutine(position, direction, length, delayStep));
         }
-        
-        private IEnumerator ExplodeCoroutine(Vector2 position, Vector2 direction, int length, float delayStep)
+
+        private IEnumerator ExplodeCoroutine(
+            Vector2 position,
+            Vector2 direction,
+            int length,
+            float delayStep
+        )
         {
             for (int i = 1; i <= length; i++)
             {
@@ -94,7 +111,8 @@ namespace Scenes.Arena.Bomb
 
                 foreach (var hit in hits)
                 {
-                    if (hit == null) continue;
+                    if (hit == null)
+                        continue;
 
                     // Pushable destructible prefab
                     var destructible = hit.GetComponent<Destructible>();
@@ -130,7 +148,8 @@ namespace Scenes.Arena.Bomb
                 }
 
                 // stop propagation if blocked by destructible/wall
-                if (blocked) yield break;
+                if (blocked)
+                    yield break;
 
                 // Spawn explosion fire
                 Explosion explosion = Instantiate(explosionPrefab, nextPos, Quaternion.identity);
@@ -143,7 +162,8 @@ namespace Scenes.Arena.Bomb
 
         public void ExplodeBomb(GameObject bomb)
         {
-            if (bomb == null) return;
+            if (bomb == null)
+                return;
 
             AudioController.I?.PlayExplosion();
 
@@ -165,7 +185,7 @@ namespace Scenes.Arena.Bomb
             Destroy(bomb);
             bombsRemaining++;
         }
-        
+
         private void ClearDestructible(Vector2 position)
         {
             Vector3Int cell = destructibleTiles.WorldToCell(position);
@@ -189,7 +209,7 @@ namespace Scenes.Arena.Bomb
             bombAmount++;
             bombsRemaining++;
         }
-        
+
         public void IncreaseBlastRadius()
         {
             explosionRadius++;
@@ -209,11 +229,12 @@ namespace Scenes.Arena.Bomb
 
         private void OnTriggerExit2D(Collider2D other)
         {
-            if (other.gameObject.layer == LayerMask.NameToLayer("Bomb")) {
+            if (other.gameObject.layer == LayerMask.NameToLayer("Bomb"))
+            {
                 other.isTrigger = false;
             }
         }
-        
+
         private void OnEnable()
         {
             bombsRemaining = bombAmount;
@@ -234,12 +255,18 @@ namespace Scenes.Arena.Bomb
             remoteBomb = false;
 
             // Extra bombs
-            int extraBombs = PlayerPrefs.GetInt($"Player{playerId}_{Scenes.Shop.ShopItemType.ExtraBomb}", 0);
+            int extraBombs = PlayerPrefs.GetInt(
+                $"Player{playerId}_{Scenes.Shop.ShopItemType.ExtraBomb}",
+                0
+            );
             bombAmount += extraBombs;
             bombsRemaining = bombAmount;
 
             // Blast radius
-            int powerUps = PlayerPrefs.GetInt($"Player{playerId}_{Scenes.Shop.ShopItemType.PowerUp}", 0);
+            int powerUps = PlayerPrefs.GetInt(
+                $"Player{playerId}_{Scenes.Shop.ShopItemType.PowerUp}",
+                0
+            );
             explosionRadius += powerUps;
 
             // Timebomb toggle
@@ -247,10 +274,15 @@ namespace Scenes.Arena.Bomb
                 timeBomb = true;
 
             // Remote bomb toggle
-            if (PlayerPrefs.GetInt($"Player{playerId}_{Scenes.Shop.ShopItemType.Controller}", 0) == 1)
+            if (
+                PlayerPrefs.GetInt($"Player{playerId}_{Scenes.Shop.ShopItemType.Controller}", 0)
+                == 1
+            )
                 remoteBomb = true;
 
-            Debug.Log($"[BombController] Player {playerId} upgrades applied: bombs={bombAmount}, radius={explosionRadius}, timeBomb={timeBomb}, remoteBomb={remoteBomb}");
+            Debug.Log(
+                $"[BombController] Player {playerId} upgrades applied: bombs={bombAmount}, radius={explosionRadius}, timeBomb={timeBomb}, remoteBomb={remoteBomb}"
+            );
         }
     }
 }
