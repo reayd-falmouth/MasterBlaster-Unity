@@ -28,6 +28,21 @@ namespace Scenes.Shop
         public Sprite coinSprite;
         public Text headingText; // <-- add this
 
+        /// <summary>
+        /// Returns the pointer text for an item at the given index ("> " if selected, "  " otherwise).
+        /// Used by UpdatePointers and by tests.
+        /// </summary>
+        public static string GetPointerTextForIndex(int index, int selectedIndex)
+        {
+            return index == selectedIndex ? "> " : "  ";
+        }
+
+        private void Awake()
+        {
+            if (items != null && items.Length > 0)
+                UpdatePointers();
+        }
+
         private void Start()
         {
             playerCount = PlayerPrefs.GetInt("Players", 2);
@@ -96,9 +111,12 @@ namespace Scenes.Shop
 
         void UpdatePointers()
         {
+            if (items == null)
+                return;
             for (int i = 0; i < items.Length; i++)
             {
-                items[i].pointerText.text = (i == selectedIndex) ? "> " : "  ";
+                if (items[i].pointerText != null)
+                    items[i].pointerText.text = GetPointerTextForIndex(i, selectedIndex);
             }
         }
 
