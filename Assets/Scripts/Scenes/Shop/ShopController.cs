@@ -1,4 +1,4 @@
-﻿using Core;
+using Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -157,7 +157,7 @@ namespace Scenes.Shop
             int playerId = currentPlayer;
             int coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
 
-            if (coins >= item.cost)
+            if (ShopPurchaseLogic.CanAfford(coins, item.cost))
             {
                 coins -= item.cost;
                 PlayerPrefs.SetInt($"Player{playerId}_Coins", coins);
@@ -177,30 +177,13 @@ namespace Scenes.Shop
 
         void ApplyUpgrade(int playerId, ShopItemType type)
         {
+            if (type == ShopItemType.Exit)
+                return;
+
             string key = $"Player{playerId}_{type}"; // e.g. "Player1_SpeedUp"
-
-            switch (type)
-            {
-                // 🔁 Stackable items
-                case ShopItemType.ExtraBomb:
-                case ShopItemType.PowerUp:
-                case ShopItemType.SpeedUp:
-                    PlayerPrefs.SetInt(key, PlayerPrefs.GetInt(key, 0) + 1);
-                    break;
-
-                // ✅ Toggle / single-use states
-                case ShopItemType.Superman:
-                case ShopItemType.Ghost:
-                case ShopItemType.Protection:
-                case ShopItemType.Controller:
-                case ShopItemType.Timebomb:
-                    PlayerPrefs.SetInt(key, 1);
-                    break;
-
-                // 🚪 Exit → nothing to save
-                case ShopItemType.Exit:
-                    break;
-            }
+            int currentLevel = PlayerPrefs.GetInt(key, 0);
+            int newLevel = ShopPurchaseLogic.GetNewLevelAfterPurchase(type, currentLevel);
+            PlayerPrefs.SetInt(key, newLevel);
         }
     }
 }
