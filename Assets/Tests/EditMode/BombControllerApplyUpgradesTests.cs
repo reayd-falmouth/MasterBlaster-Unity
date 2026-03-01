@@ -15,6 +15,10 @@ public class BombControllerApplyUpgradesTests
     [SetUp]
     public void SetUp()
     {
+        // Ensure no leftover SessionManager from another test so our new one becomes Instance
+        if (SessionManager.Instance != null)
+            Object.DestroyImmediate(SessionManager.Instance.gameObject);
+
         _sessionGo = new GameObject("SessionManager");
         _sessionManager = _sessionGo.AddComponent<SessionManager>();
         _sessionManager.Initialize(2);
