@@ -62,4 +62,32 @@ public class WinStateTests
         var result = ArenaLogic.EvaluateWinState(new[] { false, false, true }, 0, 3);
         Assert.That(result.LastAliveIndex, Is.EqualTo(2));
     }
+
+    [Test]
+    public void EvaluateWinState_OneAlive_OneWinNeeded_ReturnsGoToOvers()
+    {
+        var result = ArenaLogic.EvaluateWinState(new[] { false, true }, 0, 1);
+        Assert.That(result.Outcome, Is.EqualTo(WinOutcome.GoToOvers));
+        Assert.That(result.LastAliveIndex, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void WinStateResult_StaticFactories_ReturnCorrectOutcomes()
+    {
+        var noChange = WinStateResult.NoChange();
+        Assert.That(noChange.Outcome, Is.EqualTo(WinOutcome.NoChange));
+        Assert.That(noChange.LastAliveIndex, Is.Null);
+
+        var standingsWithIndex = WinStateResult.GoToStandings(2);
+        Assert.That(standingsWithIndex.Outcome, Is.EqualTo(WinOutcome.GoToStandings));
+        Assert.That(standingsWithIndex.LastAliveIndex, Is.EqualTo(2));
+
+        var standingsNoIndex = WinStateResult.GoToStandings();
+        Assert.That(standingsNoIndex.Outcome, Is.EqualTo(WinOutcome.GoToStandings));
+        Assert.That(standingsNoIndex.LastAliveIndex, Is.Null);
+
+        var overs = WinStateResult.GoToOvers(1);
+        Assert.That(overs.Outcome, Is.EqualTo(WinOutcome.GoToOvers));
+        Assert.That(overs.LastAliveIndex, Is.EqualTo(1));
+    }
 }

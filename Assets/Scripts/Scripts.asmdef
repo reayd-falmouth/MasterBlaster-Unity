@@ -1,22 +1,16 @@
 {
-    "name": "Tests",
+    "name": "Scripts",
     "rootNamespace": "",
     "references": [
-        "Assembly-CSharp",
-        "Scripts",
         "UnityEngine",
-        "UnityEngine.TestRunner",
-        "UnityEditor",
-        "UnityEditor.TestRunner"
+        "Unity.InputSystem"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
-    "autoReferenced": false,
+    "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false

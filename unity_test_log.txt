@@ -1,0 +1,31 @@
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Built from '6000.3/staging' branch; Version is '6000.3.9f1 (7a9955a4f2fa) revision 8034645'; Using compiler version '194234433'; Build Type 'Release'
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-david" at "2026-03-01T06:15:46.3551372Z"
+OS: 'Windows 11  (10.0.26200) Core' Language: 'en' Physical Memory: 65398 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1
+System  architecture: x64
+Process architecture: x64
+Date: 2026-03-01T06:15:46Z
+
+COMMAND LINE ARGUMENTS:
+C:\Program Files\Unity\Hub\Editor\6000.3.9f1\Editor\Unity.exe
+-batchmode
+-projectPath
+D:\Users\david\StonesAndDice_Unity_Projects\MasterBlaster
+-runTests
+-testPlatform
+editmode
+-testResults
+TestResults-editmode.xml
+-enableCodeCoverage
+-coverageResultsPath
+CoverageResults
+-debugCodeOptimization
+-coverageOptions
+generateHtmlReport;generateAdditionalMetrics;assemblyFilters:+Scripts
+-logFile
+unity_test_log.txt
+-quit
+Successfully changed project path to: D:\Users\david\StonesAndDice_Unity_Projects\MasterBlaster
+D:/Users/david/StonesAndDice_Unity_Projects/MasterBlaster
+Exiting without the bug reporter. Application will terminate with return code 1

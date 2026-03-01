@@ -30,6 +30,7 @@ jobs:
             Library-
 
       - name: Run tests
+        id: tests
         uses: game-ci/unity-test-runner@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -37,6 +38,7 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+          coverageOptions: "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;generateAdditionalReports;assemblyFilters:+Scripts;pathFilters:-**/Tests/**"
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -44,3 +46,19 @@ jobs:
         with:
           name: Test results
           path: artifacts
+
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v4
+        if: always() && steps.tests.outputs.coveragePath != ''
+        with:
+          name: Coverage results
+          path: ${{ steps.tests.outputs.coveragePath }}
+
+      # Codecov shows coverage in GitHub (PR comments, badge). Add secret CODECOV_TOKEN from https://codecov.io for private repos; optional for public.
+      - name: Upload coverage to Codecov
+        if: steps.tests.outputs.coveragePath != ''
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ${{ steps.tests.outputs.coveragePath }}
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

@@ -71,4 +71,21 @@ public class SessionManagerTests
         Assert.DoesNotThrow(() => _sessionManager.SetUpgradeLevel(99, ShopItemType.ExtraBomb, 5));
         Assert.That(_sessionManager.GetUpgradeLevel(99, ShopItemType.ExtraBomb), Is.EqualTo(0));
     }
+
+    [Test]
+    public void GetUpgradeLevel_ExitType_NotStoredInInitialize_ReturnsZero()
+    {
+        _sessionManager.Initialize(2);
+        Assert.That(_sessionManager.GetUpgradeLevel(1, ShopItemType.Exit), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Initialize_ThenPlayerUpgrades_HasEntryPerPlayer()
+    {
+        _sessionManager.Initialize(3);
+        Assert.That(_sessionManager.PlayerUpgrades.Count, Is.EqualTo(3));
+        Assert.That(_sessionManager.PlayerUpgrades.ContainsKey(1), Is.True);
+        Assert.That(_sessionManager.PlayerUpgrades.ContainsKey(2), Is.True);
+        Assert.That(_sessionManager.PlayerUpgrades.ContainsKey(3), Is.True);
+    }
 }
