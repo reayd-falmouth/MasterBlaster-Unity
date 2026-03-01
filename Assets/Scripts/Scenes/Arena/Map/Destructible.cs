@@ -9,7 +9,9 @@ namespace Scenes.Arena.Map
     public class Destructible : MonoBehaviour
     {
         public float destructionTime = 0.5f; // how long the destroy anim plays
-        [Range(0f, 1f)] public float itemSpawnChance = 0.2f;
+
+        [Range(0f, 1f)]
+        public float itemSpawnChance = 0.2f;
         public GameObject[] spawnableItems;
 
         private Rigidbody2D rb;
@@ -35,7 +37,8 @@ namespace Scenes.Arena.Map
             if (isDebris)
             {
                 // debris disappears after a short time
-                if (anim != null) anim.StartAnimation();
+                if (anim != null)
+                    anim.StartAnimation();
                 Destroy(gameObject, destructionTime);
             }
         }
@@ -45,9 +48,12 @@ namespace Scenes.Arena.Map
 
         private void Update()
         {
-            if (rb == null) return;
+            if (rb == null)
+                return;
 
-            bool isMoving = rb.bodyType == RigidbodyType2D.Dynamic && rb.linearVelocity.magnitude > movementThreshold;
+            bool isMoving =
+                rb.bodyType == RigidbodyType2D.Dynamic
+                && rb.linearVelocity.magnitude > movementThreshold;
 
             if (isMoving && !wasMoving)
             {
@@ -60,7 +66,8 @@ namespace Scenes.Arena.Map
 
         private void OnTriggerEnter2D(Collider2D other)
         {
-            if (destroyed) return;
+            if (destroyed)
+                return;
 
             if (other.gameObject.layer == LayerMask.NameToLayer("Explosion"))
             {
@@ -79,27 +86,30 @@ namespace Scenes.Arena.Map
                 anim.playOnStart = true;
                 anim.StartAnimation();
             }
-            
+
             // schedule actual removal after anim
             Destroy(gameObject, destructionTime);
         }
 
         private void OnDestroy()
         {
-            if (!gameObject.scene.isLoaded) return;
-            
+            if (!gameObject.scene.isLoaded)
+                return;
+
             SpawnItem();
         }
-        
+
         private void SpawnItem()
         {
             if (spawnableItems.Length > 0 && Random.value < itemSpawnChance)
             {
                 int randomIndex = Random.Range(0, spawnableItems.Length);
                 Instantiate(spawnableItems[randomIndex], transform.position, Quaternion.identity);
-        
+
                 // This log should now appear in your console when an item drops
-                Debug.Log($"SUCCESS: Instantiated item {spawnableItems[randomIndex].name} via Invoke."); 
+                Debug.Log(
+                    $"SUCCESS: Instantiated item {spawnableItems[randomIndex].name} via Invoke."
+                );
             }
             else
             {

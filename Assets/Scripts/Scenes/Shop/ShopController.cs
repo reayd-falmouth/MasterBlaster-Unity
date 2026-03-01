@@ -13,10 +13,10 @@ namespace Scenes.Shop
             public string name;
             public int cost;
             public Text pointerText; // purple arrow
-            public Text labelText;   // "Speed Boost"
-            public Text costText;    // "x3"
+            public Text labelText; // "Speed Boost"
+            public Text costText; // "x3"
         }
-    
+
         public ShopItem[] items;
 
         private int selectedIndex = 0;
@@ -26,15 +26,15 @@ namespace Scenes.Shop
         [Header("UI References")]
         public Transform coinContainer;
         public Sprite coinSprite;
-        public Text headingText;   // <-- add this
-    
+        public Text headingText; // <-- add this
+
         private void Start()
         {
             playerCount = PlayerPrefs.GetInt("Players", 2);
             currentPlayer = 1; // start with Player 1
             // 🔹 Initialise upgrades for all players (coins are left alone)
             SessionManager.Instance.Initialize(playerCount);
-            
+
             UpdateMenuText();
             UpdatePointers();
             RefreshCoinsDisplay();
@@ -60,7 +60,7 @@ namespace Scenes.Shop
                 RefreshCoinsDisplay();
             }
         }
-    
+
         private void InitialisePlayerPrefs(int playerCount)
         {
             for (int playerId = 1; playerId <= playerCount; playerId++)
@@ -69,23 +69,25 @@ namespace Scenes.Shop
                 {
                     if (type == ShopItemType.Exit)
                         continue; // no prefs needed
-                    
+
                     string key = $"Player{playerId}_{type}";
                     PlayerPrefs.SetInt(key, 0);
                 }
             }
 
             PlayerPrefs.Save();
-            Debug.Log("[ShopController] PlayerPrefs initialised for all players (coins unchanged).");
+            Debug.Log(
+                "[ShopController] PlayerPrefs initialised for all players (coins unchanged)."
+            );
         }
-        
+
         void UpdateMenuText()
         {
             foreach (var item in items)
             {
                 item.labelText.text = item.name;
 
-                if (item.costText != null)   // only update cost if it exists
+                if (item.costText != null) // only update cost if it exists
                     item.costText.text = $"{item.cost}";
                 else
                     item.labelText.text = item.name; // just show "Exit"

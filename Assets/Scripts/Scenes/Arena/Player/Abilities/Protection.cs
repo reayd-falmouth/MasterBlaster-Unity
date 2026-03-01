@@ -1,6 +1,6 @@
 ﻿using System.Collections;
-using UnityEngine;
 using Scenes.Shop;
+using UnityEngine;
 
 namespace Scenes.Arena.Player.Abilities
 {
@@ -8,10 +8,15 @@ namespace Scenes.Arena.Player.Abilities
     public class Protection : MonoBehaviour
     {
         [Header("Visuals")]
-        [SerializeField] private Material whiteProtectionMaterial;
-        [SerializeField] private float flickerDuration = 2f;
-        [SerializeField] private float flickerInterval = 0.2f;
-        
+        [SerializeField]
+        private Material whiteProtectionMaterial;
+
+        [SerializeField]
+        private float flickerDuration = 2f;
+
+        [SerializeField]
+        private float flickerInterval = 0.2f;
+
         private PlayerController pc;
         private SpriteRenderer[] allSpriteRenderers;
         private Material[] originalMaterials;
@@ -26,12 +31,12 @@ namespace Scenes.Arena.Player.Abilities
             for (int i = 0; i < allSpriteRenderers.Length; i++)
                 originalMaterials[i] = allSpriteRenderers[i].sharedMaterial;
         }
-        
+
         private void Start()
         {
             ApplyUpgrades();
         }
-        
+
         void ApplyUpgrades()
         {
             var playerId = pc.playerId;
@@ -51,15 +56,17 @@ namespace Scenes.Arena.Player.Abilities
             if (active)
             {
                 TakeDamage(); // absorb and flicker
-                return true;  // block death
+                return true; // block death
             }
-            return false;     // not blocking
+            return false; // not blocking
         }
-        
+
         public void TakeDamage()
         {
-            if (!active) return;
-            if (flickerCo != null) StopCoroutine(flickerCo);
+            if (!active)
+                return;
+            if (flickerCo != null)
+                StopCoroutine(flickerCo);
             flickerCo = StartCoroutine(RemoveProtection());
         }
 

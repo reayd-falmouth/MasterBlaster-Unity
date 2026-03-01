@@ -15,7 +15,8 @@ namespace Scenes.Arena.Map
 
         private void Start()
         {
-            if (anim != null) anim.StartAnimation();
+            if (anim != null)
+                anim.StartAnimation();
         }
     }
 }

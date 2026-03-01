@@ -30,8 +30,18 @@ public class PlayerSetupTests
     {
         var setup = ArenaLogic.GetPlayerSetup(4);
         Assert.That(setup.Count, Is.EqualTo(4));
-        Assert.That(setup.Select(s => s.slot).ToArray(),
-            Is.EquivalentTo(new[] { PlayerSlot.TopLeft, PlayerSlot.TopRight, PlayerSlot.BottomLeft, PlayerSlot.BottomRight }));
+        Assert.That(
+            setup.Select(s => s.slot).ToArray(),
+            Is.EquivalentTo(
+                new[]
+                {
+                    PlayerSlot.TopLeft,
+                    PlayerSlot.TopRight,
+                    PlayerSlot.BottomLeft,
+                    PlayerSlot.BottomRight
+                }
+            )
+        );
         Assert.That(setup.Select(s => s.playerId).ToArray(), Is.EquivalentTo(new[] { 1, 2, 3, 4 }));
     }
 
@@ -40,9 +50,23 @@ public class PlayerSetupTests
     {
         var setup = ArenaLogic.GetPlayerSetup(5);
         Assert.That(setup.Count, Is.EqualTo(5));
-        Assert.That(setup.Select(s => s.slot).ToArray(),
-            Is.EquivalentTo(new[] { PlayerSlot.TopLeft, PlayerSlot.TopRight, PlayerSlot.BottomLeft, PlayerSlot.BottomRight, PlayerSlot.Middle }));
-        Assert.That(setup.Select(s => s.playerId).ToArray(), Is.EquivalentTo(new[] { 1, 2, 3, 4, 5 }));
+        Assert.That(
+            setup.Select(s => s.slot).ToArray(),
+            Is.EquivalentTo(
+                new[]
+                {
+                    PlayerSlot.TopLeft,
+                    PlayerSlot.TopRight,
+                    PlayerSlot.BottomLeft,
+                    PlayerSlot.BottomRight,
+                    PlayerSlot.Middle
+                }
+            )
+        );
+        Assert.That(
+            setup.Select(s => s.playerId).ToArray(),
+            Is.EquivalentTo(new[] { 1, 2, 3, 4, 5 })
+        );
     }
 
     [Test]

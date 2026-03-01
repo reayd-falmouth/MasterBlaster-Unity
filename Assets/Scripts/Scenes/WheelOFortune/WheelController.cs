@@ -8,8 +8,8 @@ namespace Scenes.WheelOFortune
     public class WheelController : MonoBehaviour
     {
         [Header("UI References")]
-        public Transform wheelPanel;   // Vertical Layout
-        public GameObject rowPrefab;   // Prefab with Avatar + Pointer + Avatar
+        public Transform wheelPanel; // Vertical Layout
+        public GameObject rowPrefab; // Prefab with Avatar + Pointer + Avatar
 
         [Header("Avatars")]
         public Sprite[] avatarSprites; // 5 sprites, one per player
@@ -18,7 +18,7 @@ namespace Scenes.WheelOFortune
         [Header("Wheel Settings")]
         [Tooltip("Controls the spin frequency over time. X=time [0..1], Y=delay in seconds.")]
         public AnimationCurve spinCurve = AnimationCurve.EaseInOut(0, 0.01f, 1, 0.5f);
-    
+
         [Tooltip("Minimum total spin duration (seconds)")]
         public float minSpinDuration = 2f;
 
@@ -26,11 +26,11 @@ namespace Scenes.WheelOFortune
         public float maxSpinDuration = 5f;
 
         private float spinDuration; // chosen at runtime
-    
+
         [Tooltip("Extra wait time before advancing to next scene")]
         [Range(0.5f, 5f)]
         public float postSpinDelay = 1.5f;
-    
+
         private Transform[] rowPointers;
         private int playerCount;
 
@@ -69,9 +69,9 @@ namespace Scenes.WheelOFortune
         private IEnumerator SpinAndStop()
         {
             AudioController.I.ResetWheelTicks();
-        
+
             spinDuration = Random.Range(minSpinDuration, maxSpinDuration);
-        
+
             int index = 0;
 
             // Pick random stopping index
@@ -118,6 +118,5 @@ namespace Scenes.WheelOFortune
 
             SceneFlowManager.I.SignalScreenDone();
         }
-
     }
 }

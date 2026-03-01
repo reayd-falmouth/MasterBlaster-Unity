@@ -6,7 +6,8 @@ namespace Core
 {
     public class ContinueOnAnyInput : MonoBehaviour
     {
-        [SerializeField] float armDelay = 0.25f;  // small grace period after load
+        [SerializeField]
+        float armDelay = 0.25f; // small grace period after load
         float armAt;
         bool fired;
 
@@ -18,7 +19,8 @@ namespace Core
 
         void Update()
         {
-            if (fired || Time.unscaledTime < armAt) return;
+            if (fired || Time.unscaledTime < armAt)
+                return;
 
             if (PressedThisFrame())
             {
@@ -39,7 +41,7 @@ namespace Core
 
             // any connected gamepad
             foreach (var g in Gamepad.all)
-                if (g.buttonSouth.wasPressedThisFrame)  // A / Cross
+                if (g.buttonSouth.wasPressedThisFrame) // A / Cross
                     return true;
 
             return false;
@@ -52,7 +54,8 @@ using UnityEngine;
 
 public class ContinueOnAnyInput : MonoBehaviour
 {
-    [SerializeField] float armDelay = 0.25f;
+    [SerializeField]
+    float armDelay = 0.25f;
     float armAt;
     bool fired;
 
@@ -64,10 +67,16 @@ public class ContinueOnAnyInput : MonoBehaviour
 
     void Update()
     {
-        if (fired || Time.unscaledTime < armAt) return;
+        if (fired || Time.unscaledTime < armAt)
+            return;
 
-        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) ||
-            Input.GetMouseButtonDown(0) || Input.GetButtonDown("Submit") || Input.GetButtonDown("Fire1"))
+        if (
+            Input.GetKeyDown(KeyCode.Return)
+            || Input.GetKeyDown(KeyCode.Space)
+            || Input.GetMouseButtonDown(0)
+            || Input.GetButtonDown("Submit")
+            || Input.GetButtonDown("Fire1")
+        )
         {
             fired = true;
             GameFlowManager.I.SignalScreenDone();

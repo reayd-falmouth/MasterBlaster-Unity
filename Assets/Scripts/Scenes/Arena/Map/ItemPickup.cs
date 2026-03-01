@@ -25,7 +25,7 @@ namespace Scenes.Arena.Map
         }
 
         public ItemType type;
-        
+
         // ItemPickup.cs
         public static void ApplyItem(GameObject player, ItemType type)
         {
@@ -34,7 +34,7 @@ namespace Scenes.Arena.Map
             var ghostCtrl = player.GetComponentInChildren<Ghost>();
             var protectionCtrl = player.GetComponentInChildren<Protection>();
             var supermanCtrl = player.GetComponentInChildren<Superman>();
-                
+
             switch (type)
             {
                 case ItemType.ExtraBomb:
@@ -95,9 +95,8 @@ namespace Scenes.Arena.Map
                     playerCtrl.ApplyRandom(); // recursion safe
                     break;
             }
-            
         }
-        
+
         private void OnItemPickup(GameObject player)
         {
             ApplyItem(player, type);

@@ -12,7 +12,7 @@ namespace Scenes.MainMenu
         {
             public Text pointerText; // Purple ">" text
             public Text optionLabel; // Left-hand text, e.g. "WINS NEEDED"
-            public Text valueLabel;  // Right-hand text, e.g. "3"
+            public Text valueLabel; // Right-hand text, e.g. "3"
         }
 
         public MenuOption[] options;
@@ -66,14 +66,38 @@ namespace Scenes.MainMenu
         {
             switch (selectedIndex)
             {
-                case 0: winsNeeded = Mathf.Clamp(winsNeeded + (Input.GetKeyDown(KeyCode.RightArrow) ? 1 : -1), 3, 9); break;
-                case 1: players = Mathf.Clamp(players + (Input.GetKeyDown(KeyCode.RightArrow) ? 1 : -1), 2, 5); break;
-                case 2: shop = !shop; break;
-                case 3: shrinking = !shrinking; break;
-                case 4: fastIgnition = !fastIgnition; break;
-                case 5: startMoney = !startMoney; break;
-                case 6: normalLevel = !normalLevel; break;
-                case 7: gambling = !gambling; break;
+                case 0:
+                    winsNeeded = Mathf.Clamp(
+                        winsNeeded + (Input.GetKeyDown(KeyCode.RightArrow) ? 1 : -1),
+                        3,
+                        9
+                    );
+                    break;
+                case 1:
+                    players = Mathf.Clamp(
+                        players + (Input.GetKeyDown(KeyCode.RightArrow) ? 1 : -1),
+                        2,
+                        5
+                    );
+                    break;
+                case 2:
+                    shop = !shop;
+                    break;
+                case 3:
+                    shrinking = !shrinking;
+                    break;
+                case 4:
+                    fastIgnition = !fastIgnition;
+                    break;
+                case 5:
+                    startMoney = !startMoney;
+                    break;
+                case 6:
+                    normalLevel = !normalLevel;
+                    break;
+                case 7:
+                    gambling = !gambling;
+                    break;
             }
         }
 
@@ -126,14 +150,14 @@ namespace Scenes.MainMenu
 
         void LoadPrefs()
         {
-            winsNeeded   = PlayerPrefs.GetInt("WinsNeeded", 3);
-            players      = PlayerPrefs.GetInt("Players", 2);
-            shop         = PlayerPrefs.GetInt("Shop", 1) == 1;
-            shrinking    = PlayerPrefs.GetInt("Shrinking", 1) == 1;
+            winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
+            players = PlayerPrefs.GetInt("Players", 2);
+            shop = PlayerPrefs.GetInt("Shop", 1) == 1;
+            shrinking = PlayerPrefs.GetInt("Shrinking", 1) == 1;
             fastIgnition = PlayerPrefs.GetInt("FastIgnition", 1) == 1;
-            startMoney   = PlayerPrefs.GetInt("StartMoney", 0) == 1;
-            normalLevel  = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
-            gambling     = PlayerPrefs.GetInt("Gambling", 1) == 1;
+            startMoney = PlayerPrefs.GetInt("StartMoney", 0) == 1;
+            normalLevel = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
+            gambling = PlayerPrefs.GetInt("Gambling", 1) == 1;
         }
     }
 }

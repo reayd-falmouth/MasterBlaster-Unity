@@ -13,8 +13,8 @@ public static class EnsureRectTransforms
         if (boardGO == null)
         {
             EditorUtility.DisplayDialog(
-                "No Board Selected", 
-                "Please select your Board GameObject before running this tool.", 
+                "No Board Selected",
+                "Please select your Board GameObject before running this tool.",
                 "OK"
             );
             return;
@@ -35,8 +35,8 @@ public static class EnsureRectTransforms
             if (go.GetComponent<RectTransform>() == null)
             {
                 // —preserve its old position/rotation/scale—
-                Vector3 oldPos   = go.transform.localPosition;
-                Quaternion oldRot= go.transform.localRotation;
+                Vector3 oldPos = go.transform.localPosition;
+                Quaternion oldRot = go.transform.localRotation;
                 Vector3 oldScale = go.transform.localScale;
 
                 // —add the RectTransform (replaces the old Transform under the hood)—
@@ -46,13 +46,15 @@ public static class EnsureRectTransforms
                 var rt = go.GetComponent<RectTransform>();
                 rt.localPosition = oldPos;
                 rt.localRotation = oldRot;
-                rt.localScale    = oldScale;
+                rt.localScale = oldScale;
             }
         }
 
         // 5) Collapse the undo group and report
         Undo.CollapseUndoOperations(undoGroup);
-        Debug.Log($"✅ Added RectTransforms to all {allTransforms.Length} children of “{boardGO.name}”.");
+        Debug.Log(
+            $"✅ Added RectTransforms to all {allTransforms.Length} children of “{boardGO.name}”."
+        );
     }
 }
 #endif

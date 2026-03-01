@@ -7,7 +7,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 echo "=== Lint (CSharpier) ==="
 dotnet tool restore
-if ! dotnet dotnet-csharpier check Assets/; then
+if ! dotnet dotnet-csharpier --check Assets/; then
   echo "Lint failed. Fix with: dotnet dotnet-csharpier Assets/"
   exit 1
 fi

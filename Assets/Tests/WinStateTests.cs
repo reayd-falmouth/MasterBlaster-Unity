@@ -46,8 +46,14 @@ public class WinStateTests
     [Test]
     public void EvaluateWinState_NullOrEmpty_ReturnsNoChange()
     {
-        Assert.That(ArenaLogic.EvaluateWinState(null, 0, 3).Outcome, Is.EqualTo(WinOutcome.NoChange));
-        Assert.That(ArenaLogic.EvaluateWinState(System.Array.Empty<bool>(), 0, 3).Outcome, Is.EqualTo(WinOutcome.NoChange));
+        Assert.That(
+            ArenaLogic.EvaluateWinState(null, 0, 3).Outcome,
+            Is.EqualTo(WinOutcome.NoChange)
+        );
+        Assert.That(
+            ArenaLogic.EvaluateWinState(System.Array.Empty<bool>(), 0, 3).Outcome,
+            Is.EqualTo(WinOutcome.NoChange)
+        );
     }
 
     [Test]

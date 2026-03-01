@@ -7,12 +7,16 @@ namespace Scenes.Arena.Map
     public class MapSelector : MonoBehaviour
     {
         [Header("Map roots (children of Arena)")]
-        [SerializeField] private GameObject normalRoot;   // e.g. Arena/Normal
-        [SerializeField] private GameObject altRoot;      // e.g. Arena/Alt
+        [SerializeField]
+        private GameObject normalRoot; // e.g. Arena/Normal
+
+        [SerializeField]
+        private GameObject altRoot; // e.g. Arena/Alt
 
         [Header("Timer control")]
         [Tooltip("If true, selector will start the chosen shrinker's timer after switching.")]
-        [SerializeField] private bool startTimerOnApply = true;
+        [SerializeField]
+        private bool startTimerOnApply = true;
 
         void Awake()
         {
@@ -25,8 +29,8 @@ namespace Scenes.Arena.Map
 
         public void Apply(bool useNormal)
         {
-            var enableGO  = useNormal ? normalRoot : altRoot;
-            var disableGO = useNormal ? altRoot    : normalRoot;
+            var enableGO = useNormal ? normalRoot : altRoot;
+            var disableGO = useNormal ? altRoot : normalRoot;
 
             // Stop and hide the inactive map/shrinker
             if (disableGO != null && disableGO.activeSelf)

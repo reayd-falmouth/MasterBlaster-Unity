@@ -32,9 +32,18 @@ public class SessionManagerTests
 
         foreach (ShopItemType type in System.Enum.GetValues(typeof(ShopItemType)))
         {
-            if (type == ShopItemType.Exit) continue;
-            Assert.That(_sessionManager.GetUpgradeLevel(1, type), Is.EqualTo(0), $"Player 1, {type}");
-            Assert.That(_sessionManager.GetUpgradeLevel(2, type), Is.EqualTo(0), $"Player 2, {type}");
+            if (type == ShopItemType.Exit)
+                continue;
+            Assert.That(
+                _sessionManager.GetUpgradeLevel(1, type),
+                Is.EqualTo(0),
+                $"Player 1, {type}"
+            );
+            Assert.That(
+                _sessionManager.GetUpgradeLevel(2, type),
+                Is.EqualTo(0),
+                $"Player 2, {type}"
+            );
         }
     }
 

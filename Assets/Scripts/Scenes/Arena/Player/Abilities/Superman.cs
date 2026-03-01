@@ -1,7 +1,7 @@
 ﻿using Scenes.Arena.Bomb;
 using Scenes.Arena.Map;
-using UnityEngine;
 using Scenes.Shop;
+using UnityEngine;
 
 namespace Scenes.Arena.Player.Abilities
 {
@@ -25,7 +25,8 @@ namespace Scenes.Arena.Player.Abilities
 
         private void FixedUpdate()
         {
-            if (!active) return;
+            if (!active)
+                return;
 
             // Only push if the player is moving
             if (pc.Direction != Vector2.zero)
@@ -48,7 +49,8 @@ namespace Scenes.Arena.Player.Abilities
 
         private void TryConvertDestructibleAhead(Vector2 direction)
         {
-            if (bombController == null || bombController.destructibleTiles == null) return;
+            if (bombController == null || bombController.destructibleTiles == null)
+                return;
 
             // look one cell ahead
             Vector2 ahead = (Vector2)transform.position + direction;
@@ -61,8 +63,14 @@ namespace Scenes.Arena.Player.Abilities
                 bombController.destructibleTiles.SetTile(cell, null);
 
                 // spawn destructible prefab in its place
-                Vector3 worldPos = bombController.destructibleTiles.CellToWorld(cell) + new Vector3(0.5f, 0.5f, 0f);
-                var newBlock = Instantiate(bombController.destructiblePrefab, worldPos, Quaternion.identity);
+                Vector3 worldPos =
+                    bombController.destructibleTiles.CellToWorld(cell)
+                    + new Vector3(0.5f, 0.5f, 0f);
+                var newBlock = Instantiate(
+                    bombController.destructiblePrefab,
+                    worldPos,
+                    Quaternion.identity
+                );
 
                 // mark this as a pushable block, not debris
                 var destructible = newBlock.GetComponent<Destructible>();

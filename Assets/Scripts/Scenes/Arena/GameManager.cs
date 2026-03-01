@@ -14,19 +14,25 @@ namespace Scenes.Arena
     {
         // public static GameManager Instance { get; private set; }
 
-        [SerializeField] private GameObject[] players;
+        [SerializeField]
+        private GameObject[] players;
 
-        [SerializeField] private bool shrinkingEnabled;
-        [SerializeField] private bool normalLevel;
-        [SerializeField] private bool startMoney;
-        
+        [SerializeField]
+        private bool shrinkingEnabled;
+
+        [SerializeField]
+        private bool normalLevel;
+
+        [SerializeField]
+        private bool startMoney;
+
         [Header("Assign the 5 players in inspector")]
         public GameObject topLeftPlayer;
         public GameObject topRightPlayer;
         public GameObject bottomLeftPlayer;
         public GameObject bottomRightPlayer;
         public GameObject middlePlayer;
-    
+
         private void Start()
         {
             players = GameObject.FindGameObjectsWithTag("Player");
@@ -40,12 +46,12 @@ namespace Scenes.Arena
                 if (pc != null)
                     pc.ApplyUpgrades();
             }
-            
+
             // Load settings
             shrinkingEnabled = PlayerPrefs.GetInt("Shrinking", 1) == 1;
-            normalLevel      = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
-            startMoney       = PlayerPrefs.GetInt("StartMoney", 0) == 1;
-            
+            normalLevel = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
+            startMoney = PlayerPrefs.GetInt("StartMoney", 0) == 1;
+
             if (!normalLevel)
                 LoadAlternateLevelSettings();
 
@@ -74,12 +80,18 @@ namespace Scenes.Arena
         {
             switch (slot)
             {
-                case PlayerSlot.TopLeft:     return topLeftPlayer;
-                case PlayerSlot.TopRight:     return topRightPlayer;
-                case PlayerSlot.BottomLeft:  return bottomLeftPlayer;
-                case PlayerSlot.BottomRight: return bottomRightPlayer;
-                case PlayerSlot.Middle:      return middlePlayer;
-                default:                     return null;
+                case PlayerSlot.TopLeft:
+                    return topLeftPlayer;
+                case PlayerSlot.TopRight:
+                    return topRightPlayer;
+                case PlayerSlot.BottomLeft:
+                    return bottomLeftPlayer;
+                case PlayerSlot.BottomRight:
+                    return bottomRightPlayer;
+                case PlayerSlot.Middle:
+                    return middlePlayer;
+                default:
+                    return null;
             }
         }
 
@@ -90,10 +102,11 @@ namespace Scenes.Arena
             if (movement != null)
                 movement.playerId = id;
         }
-        
+
         public void CheckWinState()
         {
-            if (players == null || players.Length == 0) return;
+            if (players == null || players.Length == 0)
+                return;
 
             var playerActive = new bool[players.Length];
             int currentWinsOfLastAlive = 0;
@@ -103,14 +116,20 @@ namespace Scenes.Arena
                 if (players[i].activeSelf)
                 {
                     var pc = players[i].GetComponent<PlayerController>();
-                    if (pc != null) currentWinsOfLastAlive = pc.wins;
+                    if (pc != null)
+                        currentWinsOfLastAlive = pc.wins;
                 }
             }
 
             int winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
-            var result = ArenaLogic.EvaluateWinState(playerActive, currentWinsOfLastAlive, winsNeeded);
+            var result = ArenaLogic.EvaluateWinState(
+                playerActive,
+                currentWinsOfLastAlive,
+                winsNeeded
+            );
 
-            if (result.Outcome == WinOutcome.NoChange) return;
+            if (result.Outcome == WinOutcome.NoChange)
+                return;
 
             if (result.LastAliveIndex.HasValue)
             {
@@ -133,7 +152,7 @@ namespace Scenes.Arena
 
             Invoke(nameof(Standings), 3f);
         }
-    
+
         private void Standings()
         {
             SceneFlowManager.I.GoTo(FlowState.Standings);
@@ -166,7 +185,7 @@ namespace Scenes.Arena
                 }
             }
         }
-    
+
         public GameObject[] GetPlayers() => players;
     }
 }

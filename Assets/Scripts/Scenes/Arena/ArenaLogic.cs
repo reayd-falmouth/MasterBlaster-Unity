@@ -29,9 +29,18 @@ namespace Scenes.Arena
         public WinOutcome Outcome;
         public int? LastAliveIndex;
 
-        public static WinStateResult NoChange() => new WinStateResult { Outcome = WinOutcome.NoChange, LastAliveIndex = null };
-        public static WinStateResult GoToStandings(int? lastAliveIndex = null) => new WinStateResult { Outcome = WinOutcome.GoToStandings, LastAliveIndex = lastAliveIndex };
-        public static WinStateResult GoToOvers(int lastAliveIndex) => new WinStateResult { Outcome = WinOutcome.GoToOvers, LastAliveIndex = lastAliveIndex };
+        public static WinStateResult NoChange() =>
+            new WinStateResult { Outcome = WinOutcome.NoChange, LastAliveIndex = null };
+
+        public static WinStateResult GoToStandings(int? lastAliveIndex = null) =>
+            new WinStateResult
+            {
+                Outcome = WinOutcome.GoToStandings,
+                LastAliveIndex = lastAliveIndex
+            };
+
+        public static WinStateResult GoToOvers(int lastAliveIndex) =>
+            new WinStateResult { Outcome = WinOutcome.GoToOvers, LastAliveIndex = lastAliveIndex };
     }
 
     /// <summary>
@@ -45,7 +54,11 @@ namespace Scenes.Arena
         /// <param name="playerActive">Per-player active (alive) flags, same length as players array.</param>
         /// <param name="currentWinsOfLastAlive">Current win count of the single alive player (if any); use 0 if not applicable.</param>
         /// <param name="winsNeeded">Wins required to go to game over (Overs).</param>
-        public static WinStateResult EvaluateWinState(bool[] playerActive, int currentWinsOfLastAlive, int winsNeeded)
+        public static WinStateResult EvaluateWinState(
+            bool[] playerActive,
+            int currentWinsOfLastAlive,
+            int winsNeeded
+        )
         {
             if (playerActive == null || playerActive.Length == 0)
                 return WinStateResult.NoChange();

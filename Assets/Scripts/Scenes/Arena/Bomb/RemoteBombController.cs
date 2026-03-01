@@ -9,7 +9,12 @@ namespace Scenes.Arena.Bomb
 {
     public class RemoteBombController : MonoBehaviour
     {
-        public enum BombMode { Fuse, Time, Remote }
+        public enum BombMode
+        {
+            Fuse,
+            Time,
+            Remote
+        }
 
         [Header("Movement")]
         public float speed = 5f;
@@ -33,7 +38,7 @@ namespace Scenes.Arena.Bomb
 
         private bool detonated;
         private bool isMoving;
-        
+
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
@@ -46,8 +51,13 @@ namespace Scenes.Arena.Bomb
             SetDirection(Vector2.zero);
         }
 
-        public void Init(PlayerController owner, BombController spawner, BombMode mode,
-            KeyCode detonateKey, float fuseTime)
+        public void Init(
+            PlayerController owner,
+            BombController spawner,
+            BombMode mode,
+            KeyCode detonateKey,
+            float fuseTime
+        )
         {
             this.owner = owner;
             this.spawner = spawner;
@@ -71,20 +81,33 @@ namespace Scenes.Arena.Bomb
 
         private void Update()
         {
-            if (detonated) return;
+            if (detonated)
+                return;
 
             // Detonation rules
-            if (mode == BombMode.Time && !Input.GetKey(detonateKey)) { Detonate(); return; }
-            if (mode == BombMode.Remote && !Input.GetKey(detonateKey)) { Detonate(); return; }
+            if (mode == BombMode.Time && !Input.GetKey(detonateKey))
+            {
+                Detonate();
+                return;
+            }
+            if (mode == BombMode.Remote && !Input.GetKey(detonateKey))
+            {
+                Detonate();
+                return;
+            }
 
             // Remote mode movement via input
             if (mode == BombMode.Remote && owner != null)
             {
                 Vector2 input = Vector2.zero;
-                if (Input.GetKey(owner.inputUp)) input = Vector2.up;
-                else if (Input.GetKey(owner.inputDown)) input = Vector2.down;
-                else if (Input.GetKey(owner.inputLeft)) input = Vector2.left;
-                else if (Input.GetKey(owner.inputRight)) input = Vector2.right;
+                if (Input.GetKey(owner.inputUp))
+                    input = Vector2.up;
+                else if (Input.GetKey(owner.inputDown))
+                    input = Vector2.down;
+                else if (Input.GetKey(owner.inputLeft))
+                    input = Vector2.left;
+                else if (Input.GetKey(owner.inputRight))
+                    input = Vector2.right;
 
                 SetDirection(input);
             }
@@ -93,18 +116,19 @@ namespace Scenes.Arena.Bomb
                 StopMoveSound();
             }
         }
-        
+
         private void FixedUpdate()
         {
-            if (detonated || rb == null) return; //
+            if (detonated || rb == null)
+                return; //
 
             if (mode == BombMode.Remote && direction != Vector2.zero) //
             {
                 Vector2 translation = speed * Time.fixedDeltaTime * direction; //
-                
+
                 // Define layers that should block the bomb's movement: Walls and Destructibles.
                 int blockingLayers = LayerMask.GetMask("Stage", "Destructible");
-                
+
                 // Check if the next position overlaps with any object on the blocking layers.
                 if (!Physics2D.OverlapCircle(rb.position + translation, 0.3f, blockingLayers))
                 {
@@ -128,25 +152,38 @@ namespace Scenes.Arena.Bomb
             direction = Cardinal(newDirection);
 
             // enable exactly one sprite
-            spriteIdle.enabled = spriteUp.enabled = spriteDown.enabled = spriteLeft.enabled = spriteRight.enabled = false;
+            spriteIdle.enabled =
+                spriteUp.enabled =
+                spriteDown.enabled =
+                spriteLeft.enabled =
+                spriteRight.enabled =
+                    false;
 
-            if (direction == Vector2.up) spriteUp.enabled = true;
-            else if (direction == Vector2.down) spriteDown.enabled = true;
-            else if (direction == Vector2.left) spriteLeft.enabled = true;
-            else if (direction == Vector2.right) spriteRight.enabled = true;
-            else spriteIdle.enabled = true;
+            if (direction == Vector2.up)
+                spriteUp.enabled = true;
+            else if (direction == Vector2.down)
+                spriteDown.enabled = true;
+            else if (direction == Vector2.left)
+                spriteLeft.enabled = true;
+            else if (direction == Vector2.right)
+                spriteRight.enabled = true;
+            else
+                spriteIdle.enabled = true;
         }
 
         private static Vector2 Cardinal(Vector2 v)
         {
-            if (Mathf.Abs(v.x) > Mathf.Abs(v.y)) return v.x > 0 ? Vector2.right : Vector2.left;
-            if (Mathf.Abs(v.y) > 0) return v.y > 0 ? Vector2.up : Vector2.down;
+            if (Mathf.Abs(v.x) > Mathf.Abs(v.y))
+                return v.x > 0 ? Vector2.right : Vector2.left;
+            if (Mathf.Abs(v.y) > 0)
+                return v.y > 0 ? Vector2.up : Vector2.down;
             return Vector2.zero;
         }
-    
+
         public void Detonate()
         {
-            if (detonated) return;
+            if (detonated)
+                return;
             detonated = true;
 
             if (mode == BombMode.Remote && owner != null)
@@ -171,21 +208,24 @@ namespace Scenes.Arena.Bomb
                 StopMoveSound();
             }
         }
-    
+
         // --- SUPERMAN PUSH LOGIC ---
         private void OnCollisionEnter2D(Collision2D collision)
         {
             if (collision.gameObject.CompareTag("Player"))
             {
-                var super = collision.gameObject.GetComponentInChildren<Player.Abilities.Superman>();
+                var super =
+                    collision.gameObject.GetComponentInChildren<Player.Abilities.Superman>();
                 if (super != null && super.IsActive)
                 {
                     rb.bodyType = RigidbodyType2D.Dynamic;
-                    rb.linearVelocity = Vector2.zero; 
+                    rb.linearVelocity = Vector2.zero;
                     rb.angularVelocity = 0f;
 
                     // Work out push direction from contact points
-                    Vector2 pushDir = (rb.position - (Vector2)collision.transform.position).normalized;
+                    Vector2 pushDir = (
+                        rb.position - (Vector2)collision.transform.position
+                    ).normalized;
                     SetDirection(pushDir);
                     if (!isMoving)
                     {
@@ -199,10 +239,13 @@ namespace Scenes.Arena.Bomb
         {
             if (collision.gameObject.CompareTag("Player"))
             {
-                var super = collision.gameObject.GetComponentInChildren<Player.Abilities.Superman>();
+                var super =
+                    collision.gameObject.GetComponentInChildren<Player.Abilities.Superman>();
                 if (super != null && super.IsActive)
                 {
-                    Vector2 pushDir = (rb.position - (Vector2)collision.transform.position).normalized;
+                    Vector2 pushDir = (
+                        rb.position - (Vector2)collision.transform.position
+                    ).normalized;
                     SetDirection(pushDir);
                     if (!isMoving && rb.linearVelocity.sqrMagnitude > 0.01f)
                     {
@@ -211,7 +254,7 @@ namespace Scenes.Arena.Bomb
                 }
             }
         }
-        
+
         private void OnCollisionExit2D(Collision2D collision)
         {
             if (collision.gameObject.CompareTag("Player"))
@@ -225,6 +268,7 @@ namespace Scenes.Arena.Bomb
                 StopMoveSound();
             }
         }
+
         private void PlayMoveSound()
         {
             AudioController.I?.PlayObjectMove();

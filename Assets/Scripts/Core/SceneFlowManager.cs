@@ -4,23 +4,51 @@ using Utilities;
 
 namespace Core
 {
-    public enum FlowState { Credits, Title, Menu, Countdown, Game, Standings, Wheel, Shop, Overs }
+    public enum FlowState
+    {
+        Credits,
+        Title,
+        Menu,
+        Countdown,
+        Game,
+        Standings,
+        Wheel,
+        Shop,
+        Overs
+    }
 
     public class SceneFlowManager : PersistentSingleton<SceneFlowManager>
     {
         public static SceneFlowManager I => Instance;
 
         [Header("Scene Names")]
-        [SerializeField] string creditsScene   = "Credits";
-        [SerializeField] string titleScene     = "Title";
-        [SerializeField] string menuScene      = "Menu";    
-        [SerializeField] string countdownScene = "Countdown";
-        [SerializeField] string gameScene      = "Game";
-        [SerializeField] string standingsScene = "Standings";
-        [SerializeField] string wheelScene     = "Wheel";
-        [SerializeField] string shopScene      = "Shop";
-        [SerializeField] string oversScene      = "Overs";
-    
+        [SerializeField]
+        string creditsScene = "Credits";
+
+        [SerializeField]
+        string titleScene = "Title";
+
+        [SerializeField]
+        string menuScene = "Menu";
+
+        [SerializeField]
+        string countdownScene = "Countdown";
+
+        [SerializeField]
+        string gameScene = "Game";
+
+        [SerializeField]
+        string standingsScene = "Standings";
+
+        [SerializeField]
+        string wheelScene = "Wheel";
+
+        [SerializeField]
+        string shopScene = "Shop";
+
+        [SerializeField]
+        string oversScene = "Overs";
+
         FlowState state;
 
         void Start()
@@ -36,19 +64,19 @@ namespace Core
             switch (state)
             {
                 case FlowState.Credits:
-                    GoTo(FlowState.Title); 
+                    GoTo(FlowState.Title);
                     break;
 
                 case FlowState.Title:
-                    GoTo(FlowState.Menu);  
+                    GoTo(FlowState.Menu);
                     break;
 
                 case FlowState.Menu:
-                    SignalMenuStart();         
+                    SignalMenuStart();
                     break;
 
                 case FlowState.Countdown:
-                    GoTo(FlowState.Game);  
+                    GoTo(FlowState.Game);
                     break;
 
                 case FlowState.Standings:
@@ -93,27 +121,28 @@ namespace Core
             SceneManager.LoadScene(SceneFor(next), LoadSceneMode.Single);
         }
 
-        SceneNamesConfig GetConfig() => new SceneNamesConfig
-        {
-            Credits = creditsScene,
-            Title = titleScene,
-            Menu = menuScene,
-            Countdown = countdownScene,
-            Game = gameScene,
-            Standings = standingsScene,
-            Wheel = wheelScene,
-            Shop = shopScene,
-            Overs = oversScene
-        };
+        SceneNamesConfig GetConfig() =>
+            new SceneNamesConfig
+            {
+                Credits = creditsScene,
+                Title = titleScene,
+                Menu = menuScene,
+                Countdown = countdownScene,
+                Game = gameScene,
+                Standings = standingsScene,
+                Wheel = wheelScene,
+                Shop = shopScene,
+                Overs = oversScene
+            };
 
         string SceneFor(FlowState s) => SceneFlowMapper.SceneFor(s, GetConfig());
 
-        public FlowState StateForSceneName(string n) => SceneFlowMapper.StateForSceneName(n, GetConfig());
-    
+        public FlowState StateForSceneName(string n) =>
+            SceneFlowMapper.StateForSceneName(n, GetConfig());
+
         public void GoToOvers()
         {
             GoTo(FlowState.Overs);
         }
-
     }
 }
