@@ -32,6 +32,15 @@ namespace Scenes.Arena.Bomb
 
         private readonly List<GameObject> activeBombs = new List<GameObject>();
 
+        private int baseBombAmount;
+        private int baseExplosionRadius;
+
+        private void Awake()
+        {
+            baseBombAmount = bombAmount;
+            baseExplosionRadius = explosionRadius;
+        }
+
         private void Update()
         {
             if (bombsRemaining <= 0)
@@ -250,8 +259,9 @@ namespace Scenes.Arena.Bomb
         {
             if (Core.SessionManager.Instance == null)
                 return;
-            // Reset to base values first
-            bombsRemaining = bombAmount;
+            // Reset to base values so multiple calls (e.g. OnEnable + GameManager) are idempotent
+            bombAmount = baseBombAmount;
+            explosionRadius = baseExplosionRadius;
             timeBomb = false;
             remoteBomb = false;
 
