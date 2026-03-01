@@ -259,6 +259,11 @@ namespace Scenes.Arena.Bomb
         {
             if (Core.SessionManager.Instance == null)
                 return;
+            // Capture base from current values if Awake hasn't run yet (e.g. in EditMode tests)
+            if (baseBombAmount == 0)
+                baseBombAmount = bombAmount;
+            if (baseExplosionRadius == 0)
+                baseExplosionRadius = explosionRadius;
             // Reset to base values so multiple calls (e.g. OnEnable + GameManager) are idempotent
             bombAmount = baseBombAmount;
             explosionRadius = baseExplosionRadius;

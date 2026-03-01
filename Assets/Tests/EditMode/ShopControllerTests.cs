@@ -1,3 +1,4 @@
+using System.Reflection;
 using Core;
 using NUnit.Framework;
 using Scenes.Shop;
@@ -14,7 +15,20 @@ public class ShopControllerTests
             Object.DestroyImmediate(SessionManager.Instance.gameObject);
 
         _sessionManagerGo = new GameObject("SessionManagerForShopTests");
-        _sessionManagerGo.AddComponent<SessionManager>();
+        var sessionManager = _sessionManagerGo.AddComponent<SessionManager>();
+        SetSessionManagerInstance(sessionManager);
+    }
+
+    private static void SetSessionManagerInstance(SessionManager instance)
+    {
+        var singletonType = typeof(SessionManager).BaseType?.BaseType;
+        if (singletonType == null)
+            return;
+        var field = singletonType.GetField(
+            "s_instance",
+            BindingFlags.Static | BindingFlags.NonPublic
+        );
+        field?.SetValue(null, instance);
     }
 
     [TearDown]

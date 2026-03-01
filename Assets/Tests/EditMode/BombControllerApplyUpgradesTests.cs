@@ -1,3 +1,4 @@
+using System.Reflection;
 using Core;
 using NUnit.Framework;
 using Scenes.Arena.Bomb;
@@ -21,6 +22,8 @@ public class BombControllerApplyUpgradesTests
 
         _sessionGo = new GameObject("SessionManager");
         _sessionManager = _sessionGo.AddComponent<SessionManager>();
+        // EditMode may not call Awake when AddComponent runs; force singleton so ApplyUpgrades sees Instance
+        SetSessionManagerInstance(_sessionManager);
         _sessionManager.Initialize(2);
         _sessionManager.SetUpgradeLevel(1, ShopItemType.ExtraBomb, 1);
         _sessionManager.SetUpgradeLevel(1, ShopItemType.PowerUp, 1);
@@ -30,6 +33,18 @@ public class BombControllerApplyUpgradesTests
         _bombController = _playerGo.AddComponent<BombController>();
         _bombController.bombAmount = 1;
         _bombController.explosionRadius = 1;
+    }
+
+    private static void SetSessionManagerInstance(SessionManager instance)
+    {
+        var singletonType = typeof(SessionManager).BaseType?.BaseType;
+        if (singletonType == null)
+            return;
+        var field = singletonType.GetField(
+            "s_instance",
+            BindingFlags.Static | BindingFlags.NonPublic
+        );
+        field?.SetValue(null, instance);
     }
 
     [TearDown]
