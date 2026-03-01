@@ -156,7 +156,11 @@ namespace Scenes.Arena.Player
             visualState = PlayerVisualState.Death;
             UpdateVisualState();
 
-            if (audioSource != null && AudioController.I != null && AudioController.I.DeathClip != null)
+            if (
+                audioSource != null
+                && AudioController.I != null
+                && AudioController.I.DeathClip != null
+            )
                 audioSource.PlayOneShot(AudioController.I.DeathClip, 0.8f);
             Invoke(nameof(OnDeathSequenceEnded), 1.25f);
         }

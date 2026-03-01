@@ -49,7 +49,10 @@ public class SceneFlowManagerTests
         PlayerPrefs.SetInt("Gambling", 1);
         try
         {
-            Assert.That(SceneFlowManager.GetNextState(FlowState.Standings), Is.EqualTo(FlowState.Wheel));
+            Assert.That(
+                SceneFlowManager.GetNextState(FlowState.Standings),
+                Is.EqualTo(FlowState.Wheel)
+            );
         }
         finally
         {
@@ -64,7 +67,10 @@ public class SceneFlowManagerTests
         PlayerPrefs.SetInt("Shop", 1);
         try
         {
-            Assert.That(SceneFlowManager.GetNextState(FlowState.Standings), Is.EqualTo(FlowState.Shop));
+            Assert.That(
+                SceneFlowManager.GetNextState(FlowState.Standings),
+                Is.EqualTo(FlowState.Shop)
+            );
         }
         finally
         {
@@ -80,7 +86,10 @@ public class SceneFlowManagerTests
         PlayerPrefs.SetInt("Shop", 0);
         try
         {
-            Assert.That(SceneFlowManager.GetNextState(FlowState.Standings), Is.EqualTo(FlowState.Countdown));
+            Assert.That(
+                SceneFlowManager.GetNextState(FlowState.Standings),
+                Is.EqualTo(FlowState.Countdown)
+            );
         }
         finally
         {
@@ -109,7 +118,10 @@ public class SceneFlowManagerTests
         PlayerPrefs.SetInt("Shop", 0);
         try
         {
-            Assert.That(SceneFlowManager.GetNextState(FlowState.Wheel), Is.EqualTo(FlowState.Countdown));
+            Assert.That(
+                SceneFlowManager.GetNextState(FlowState.Wheel),
+                Is.EqualTo(FlowState.Countdown)
+            );
         }
         finally
         {
@@ -124,8 +136,14 @@ public class SceneFlowManagerTests
         PlayerPrefs.SetInt("Shop", 0);
         try
         {
-            Assert.That(SceneFlowManager.GetNextState(FlowState.Standings), Is.Not.EqualTo(FlowState.Game));
-            Assert.That(SceneFlowManager.GetNextState(FlowState.Wheel), Is.Not.EqualTo(FlowState.Game));
+            Assert.That(
+                SceneFlowManager.GetNextState(FlowState.Standings),
+                Is.Not.EqualTo(FlowState.Game)
+            );
+            Assert.That(
+                SceneFlowManager.GetNextState(FlowState.Wheel),
+                Is.Not.EqualTo(FlowState.Game)
+            );
         }
         finally
         {

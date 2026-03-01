@@ -62,7 +62,9 @@ namespace Core
         /// </summary>
         public static bool ShouldAdvanceOnAnyInput(FlowState state)
         {
-            return state == FlowState.Credits || state == FlowState.Title || state == FlowState.Overs;
+            return state == FlowState.Credits
+                || state == FlowState.Title
+                || state == FlowState.Overs;
         }
 
         void Start()

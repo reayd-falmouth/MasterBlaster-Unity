@@ -19,7 +19,10 @@ public class SessionManagerEditor : Editor
         EditorGUILayout.LabelField("Session state (runtime)", EditorStyles.boldLabel);
 
         if (sm.MatchWinnerPlayerId != 0)
-            EditorGUILayout.LabelField("Match winner", $"Player {sm.MatchWinnerPlayerId} – {sm.GetMatchWinnerName()}");
+            EditorGUILayout.LabelField(
+                "Match winner",
+                $"Player {sm.MatchWinnerPlayerId} – {sm.GetMatchWinnerName()}"
+            );
 
         EditorGUILayout.LabelField("Player coins");
         EditorGUI.indentLevel++;
