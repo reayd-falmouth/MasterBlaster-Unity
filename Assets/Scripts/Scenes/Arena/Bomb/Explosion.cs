@@ -23,7 +23,11 @@ namespace Scenes.Arena.Bomb
         /// <summary>Play the explosion sound once on this object's AudioSource (call only on the central explosion). DestroyAfter will delay destruction until the clip finishes.</summary>
         public void PlayExplosionSound()
         {
-            if (audioSource == null || AudioController.I == null || AudioController.I.ExplosionClip == null)
+            if (
+                audioSource == null
+                || AudioController.I == null
+                || AudioController.I.ExplosionClip == null
+            )
                 return;
             audioSource.PlayOneShot(AudioController.I.ExplosionClip, 0.8f);
             explosionClipLength = AudioController.I.ExplosionClip.length;
@@ -37,7 +41,8 @@ namespace Scenes.Arena.Bomb
 
         public void DestroyAfter(float seconds)
         {
-            float delay = explosionClipLength > 0 ? Mathf.Max(seconds, explosionClipLength) : seconds;
+            float delay =
+                explosionClipLength > 0 ? Mathf.Max(seconds, explosionClipLength) : seconds;
             Destroy(gameObject, delay);
         }
     }

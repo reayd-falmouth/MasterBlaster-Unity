@@ -65,7 +65,11 @@ namespace Scenes.Arena.Map
 
             if (isMoving && !wasMoving)
             {
-                if (moveAudioSource != null && AudioController.I != null && AudioController.I.MoveEffectClip != null)
+                if (
+                    moveAudioSource != null
+                    && AudioController.I != null
+                    && AudioController.I.MoveEffectClip != null
+                )
                 {
                     moveAudioSource.clip = AudioController.I.MoveEffectClip;
                     moveAudioSource.loop = true;

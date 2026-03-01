@@ -32,6 +32,15 @@ namespace Scenes.Arena.Bomb
 
         private readonly List<GameObject> activeBombs = new List<GameObject>();
 
+        private int baseBombAmount;
+        private int baseExplosionRadius;
+
+        private void Awake()
+        {
+            baseBombAmount = bombAmount;
+            baseExplosionRadius = explosionRadius;
+        }
+
         private void Update()
         {
             if (bombsRemaining <= 0)
@@ -169,20 +178,27 @@ namespace Scenes.Arena.Bomb
             position.x = Mathf.Round(position.x);
             position.y = Mathf.Round(position.y);
 
-            // center fire – play explosion sound on this instance only
+            activeBombs.Remove(bomb);
+            Destroy(bomb);
+            bombsRemaining++;
+
+            // Center fire – play explosion sound on this instance only
             Explosion explosion = Instantiate(explosionPrefab, position, Quaternion.identity);
             explosion.PlayExplosionSound();
             explosion.DestroyAfter(explosionDuration);
 
-            // propagate
+            // Defer propagation to next frame to avoid stack overflow when two bombs chain
+            StartCoroutine(ExplodeBombPropagateNextFrame(position));
+        }
+
+        private IEnumerator ExplodeBombPropagateNextFrame(Vector2 position)
+        {
+            yield return null;
+
             Explode(position, Vector2.up, explosionRadius, explosionDelay);
             Explode(position, Vector2.down, explosionRadius, explosionDelay);
             Explode(position, Vector2.left, explosionRadius, explosionDelay);
             Explode(position, Vector2.right, explosionRadius, explosionDelay);
-
-            activeBombs.Remove(bomb);
-            Destroy(bomb);
-            bombsRemaining++;
         }
 
         private void ClearDestructible(Vector2 position)
@@ -250,8 +266,14 @@ namespace Scenes.Arena.Bomb
         {
             if (Core.SessionManager.Instance == null)
                 return;
-            // Reset to base values first
-            bombsRemaining = bombAmount;
+            // Capture base from current values if Awake hasn't run yet (e.g. in EditMode tests)
+            if (baseBombAmount == 0)
+                baseBombAmount = bombAmount;
+            if (baseExplosionRadius == 0)
+                baseExplosionRadius = explosionRadius;
+            // Reset to base values so multiple calls (e.g. OnEnable + GameManager) are idempotent
+            bombAmount = baseBombAmount;
+            explosionRadius = baseExplosionRadius;
             timeBomb = false;
             remoteBomb = false;
 

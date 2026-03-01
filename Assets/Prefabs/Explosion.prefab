@@ -325,7 +325,7 @@ MonoBehaviour:
   - {fileID: -328105152971204683, guid: 564bb63966a357540a9f5ec5b94c4d2b, type: 3}
   - {fileID: 9118549529482997128, guid: 564bb63966a357540a9f5ec5b94c4d2b, type: 3}
   animationTime: 0.08333334
-  loop: 1
+  loop: 0
   idle: 0
   playOnStart: 1
 --- !u!1 &2941661998231525673
@@ -441,6 +441,6 @@ MonoBehaviour:
   - {fileID: 7545615617783094258, guid: 77378393eaf3fe04387b1941d248dabf, type: 3}
   - {fileID: 6008817306966069758, guid: 77378393eaf3fe04387b1941d248dabf, type: 3}
   animationTime: 0.08333334
-  loop: 1
+  loop: 0
   idle: 0
   playOnStart: 1

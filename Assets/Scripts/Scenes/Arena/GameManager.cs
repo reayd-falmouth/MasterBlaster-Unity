@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using Core;
+using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -62,6 +63,9 @@ namespace Scenes.Arena
                 {
                     pc.wins = SessionManager.Instance.GetWins(pc.playerId);
                     pc.ApplyUpgrades();
+                    var bc = p.GetComponent<BombController>();
+                    if (bc != null)
+                        bc.ApplyUpgrades(pc.playerId);
                 }
             }
 
@@ -193,7 +197,10 @@ namespace Scenes.Arena
                     if (result.Outcome == WinOutcome.GoToOvers || shouldGoToOvers)
                     {
                         if (SessionManager.Instance != null)
-                            SessionManager.Instance.SetMatchWinner(movement.playerId, lastAlive.name);
+                            SessionManager.Instance.SetMatchWinner(
+                                movement.playerId,
+                                lastAlive.name
+                            );
                         SceneFlowManager.I.GoToOvers();
                         return;
                     }
