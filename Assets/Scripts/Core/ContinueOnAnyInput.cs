@@ -1,4 +1,4 @@
-﻿#if ENABLE_INPUT_SYSTEM
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -24,6 +24,11 @@ namespace Core
 
             if (PressedThisFrame())
             {
+                if (
+                    SceneFlowManager.I == null
+                    || !SceneFlowManager.ShouldAdvanceOnAnyInput(SceneFlowManager.I.CurrentState)
+                )
+                    return;
                 fired = true;
                 SceneFlowManager.I.SignalScreenDone();
             }
@@ -50,6 +55,7 @@ namespace Core
 }
 #else
 // Legacy Input fallback
+using Core;
 using UnityEngine;
 
 public class ContinueOnAnyInput : MonoBehaviour
@@ -78,8 +84,13 @@ public class ContinueOnAnyInput : MonoBehaviour
             || Input.GetButtonDown("Fire1")
         )
         {
+            if (
+                SceneFlowManager.I == null
+                || !SceneFlowManager.ShouldAdvanceOnAnyInput(SceneFlowManager.I.CurrentState)
+            )
+                return;
             fired = true;
-            GameFlowManager.I.SignalScreenDone();
+            SceneFlowManager.I.SignalScreenDone();
         }
     }
 }

@@ -51,6 +51,20 @@ namespace Core
 
         FlowState state;
 
+        /// <summary>
+        /// Current flow state (used by ContinueOnAnyInput to decide if any key should advance).
+        /// </summary>
+        public FlowState CurrentState => state;
+
+        /// <summary>
+        /// True only for screens where "continue on any input" should advance (Credits, Title).
+        /// Menu and other screens must use their own UI (e.g. Return to start).
+        /// </summary>
+        public static bool ShouldAdvanceOnAnyInput(FlowState state)
+        {
+            return state == FlowState.Credits || state == FlowState.Title;
+        }
+
         void Start()
         {
             var sceneName = SceneManager.GetActiveScene().name;

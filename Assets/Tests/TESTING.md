@@ -15,6 +15,7 @@ EditMode tests live in **EditMode/**.
 | `Scenes/Shop/ShopPurchaseLogic` | EditMode/ShopPurchaseLogicTests.cs |
 | `Scenes/Arena/ArenaLogic`, `WinStateResult`, `PlayerSlot`, `WinOutcome` | EditMode/PlayerSetupTests.cs, EditMode/WinStateTests.cs |
 | `Utilities/Singleton` | EditMode/SingletonTests.cs |
+| `Core/SceneFlowManager` (ShouldAdvanceOnAnyInput) | EditMode/SceneFlowManagerTests.cs |
 
 ## PlayMode tests
 
@@ -28,7 +29,7 @@ EditMode tests live in **EditMode/**.
 
 No dedicated unit tests; covered by integration, PlayMode, or manual testing.
 
-- **Core:** AudioController, ContinueOnAnyInput, SceneFlowManager, AnimatedSpriteRenderer
+- **Core:** AudioController, ContinueOnAnyInput, AnimatedSpriteRenderer
 - **Scenes/Shop:** ShopController (logic in ShopPurchaseLogic is unit-tested)
 - **Scenes/Arena:** GameManager, MapSelector, ArenaShrinker, ItemPickup, Destructible, Indestructible, Bomb/Explosion, Bomb/RemoteBombController
 - **Scenes/Arena/Player:** PlayerController, DebugItemSpawner, PlayerDebugPlayerPrefs, Abilities (Ghost, Protection, Superman)
