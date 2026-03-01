@@ -1,4 +1,4 @@
-﻿using Core;
+using Core;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -51,7 +51,7 @@ namespace Scenes.Standings
                     Destroy(child.gameObject);
                 }
 
-                int wins = PlayerPrefs.GetInt($"Player{i}_Wins", 0);
+                int wins = SessionManager.Instance != null ? SessionManager.Instance.GetWins(i) : 0;
                 Debug.Log($"Player {i} wins = {wins}");
 
                 for (int t = 0; t < wins; t++)

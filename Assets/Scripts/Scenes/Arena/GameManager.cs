@@ -54,12 +54,15 @@ namespace Scenes.Arena
 
             SetupPlayers(playerCount);
 
-            // 🔹 Force upgrades to be reapplied every new game round (only when SessionManager exists)
+            // 🔹 Force upgrades and wins to be reapplied every new game round (only for players in this game)
             foreach (var p in players)
             {
                 var pc = p.GetComponent<PlayerController>();
-                if (pc != null && SessionManager.Instance != null)
+                if (pc != null && pc.playerId > 0 && SessionManager.Instance != null)
+                {
+                    pc.wins = SessionManager.Instance.GetWins(pc.playerId);
                     pc.ApplyUpgrades();
+                }
             }
 
             // Load settings
@@ -70,8 +73,13 @@ namespace Scenes.Arena
             if (!normalLevel)
                 LoadAlternateLevelSettings();
 
-            if (startMoney)
+            // Start money only on first game from menu, not when returning from shop for another round
+            if (startMoney && PlayerPrefs.GetInt("GiveStartMoneyNextArena", 0) == 1)
+            {
                 GivePlayersStartCoin();
+                PlayerPrefs.SetInt("GiveStartMoneyNextArena", 0);
+                PlayerPrefs.Save();
+            }
         }
 
         void SetupPlayers(int count)
@@ -112,10 +120,13 @@ namespace Scenes.Arena
 
         private void EnablePlayer(GameObject playerObj, int id)
         {
-            playerObj.SetActive(true);
             var movement = playerObj.GetComponent<PlayerController>();
             if (movement != null)
+            {
                 movement.playerId = id;
+                movement.wins = SessionManager.Instance != null ? SessionManager.Instance.GetWins(id) : 0;
+            }
+            playerObj.SetActive(true);
         }
 
         public void CheckWinState()
@@ -124,7 +135,8 @@ namespace Scenes.Arena
                 return;
 
             var playerActive = new bool[players.Length];
-            int currentWinsOfLastAlive = 0;
+            int lastAlivePlayerId = 0;
+            int lastAlivePcWins = 0;
             for (int i = 0; i < players.Length; i++)
             {
                 playerActive[i] = players[i].activeSelf;
@@ -132,9 +144,17 @@ namespace Scenes.Arena
                 {
                     var pc = players[i].GetComponent<PlayerController>();
                     if (pc != null)
-                        currentWinsOfLastAlive = pc.wins;
+                    {
+                        lastAlivePlayerId = pc.playerId;
+                        lastAlivePcWins = pc.wins;
+                    }
                 }
             }
+
+            // Use SessionManager as source of truth for win count when deciding Overs vs Standings
+            int currentWinsOfLastAlive = (lastAlivePlayerId != 0 && SessionManager.Instance != null)
+                ? SessionManager.Instance.GetWins(lastAlivePlayerId)
+                : lastAlivePcWins;
 
             int winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
             var result = ArenaLogic.EvaluateWinState(
@@ -146,16 +166,28 @@ namespace Scenes.Arena
             if (result.Outcome == WinOutcome.NoChange)
                 return;
 
+            // When exactly one player is left, we always transition to Standings or Overs.
             if (result.LastAliveIndex.HasValue)
             {
                 var lastAlive = players[result.LastAliveIndex.Value];
                 var movement = lastAlive.GetComponent<PlayerController>();
                 if (movement != null)
                 {
-                    movement.wins++;
-                    PlayerPrefs.SetInt(lastAlive.name + "_Wins", movement.wins);
-                    PlayerPrefs.Save();
-                    if (result.Outcome == WinOutcome.GoToOvers)
+                    if (SessionManager.Instance != null)
+                    {
+                        SessionManager.Instance.AddWin(movement.playerId);
+                        movement.wins = SessionManager.Instance.GetWins(movement.playerId);
+                    }
+                    else
+                        movement.wins++;
+
+                    // Defensive: re-check from SessionManager in case we were given stale wins
+                    int winsAfterThisRound = SessionManager.Instance != null
+                        ? SessionManager.Instance.GetWins(movement.playerId)
+                        : movement.wins;
+                    bool shouldGoToOvers = winsAfterThisRound >= winsNeeded;
+
+                    if (result.Outcome == WinOutcome.GoToOvers || shouldGoToOvers)
                     {
                         PlayerPrefs.SetString("WinnerName", lastAlive.name);
                         PlayerPrefs.Save();

@@ -14,11 +14,15 @@ namespace Core
         /// <summary>Session-only coin count per player (not in PlayerPrefs).</summary>
         public Dictionary<int, int> PlayerCoins = new Dictionary<int, int>();
 
+        /// <summary>Session-only win count per player (matches won this session).</summary>
+        public Dictionary<int, int> PlayerWins = new Dictionary<int, int>();
+
         // 3. Setup/Cleanup Method
         public void Initialize(int playerCount)
         {
             PlayerUpgrades.Clear();
             PlayerCoins.Clear();
+            PlayerWins.Clear();
             for (int id = 1; id <= playerCount; id++)
             {
                 // Initialize each player with a dictionary to store their upgrades
@@ -31,6 +35,7 @@ namespace Core
                         PlayerUpgrades[id][type] = 0;
                 }
                 PlayerCoins[id] = 0;
+                PlayerWins[id] = 0;
             }
         }
 
@@ -41,14 +46,13 @@ namespace Core
 
         public void SetCoins(int playerId, int value)
         {
-            if (PlayerCoins.ContainsKey(playerId))
-                PlayerCoins[playerId] = value;
+            PlayerCoins[playerId] = value;
         }
 
         public void AddCoins(int playerId, int amount)
         {
-            if (PlayerCoins.ContainsKey(playerId))
-                PlayerCoins[playerId] += amount;
+            int current = PlayerCoins.TryGetValue(playerId, out int c) ? c : 0;
+            PlayerCoins[playerId] = current + amount;
         }
 
         // 4. Accessor/Mutator Method
@@ -63,10 +67,25 @@ namespace Core
 
         public void SetUpgradeLevel(int playerId, ShopItemType type, int level)
         {
-            if (PlayerUpgrades.ContainsKey(playerId))
-            {
-                PlayerUpgrades[playerId][type] = level;
-            }
+            if (!PlayerUpgrades.ContainsKey(playerId))
+                PlayerUpgrades[playerId] = new Dictionary<ShopItemType, int>();
+            PlayerUpgrades[playerId][type] = level;
+        }
+
+        public int GetWins(int playerId)
+        {
+            return PlayerWins.TryGetValue(playerId, out int w) ? w : 0;
+        }
+
+        public void SetWins(int playerId, int value)
+        {
+            PlayerWins[playerId] = value;
+        }
+
+        public void AddWin(int playerId)
+        {
+            int current = PlayerWins.TryGetValue(playerId, out int w) ? w : 0;
+            PlayerWins[playerId] = current + 1;
         }
     }
 }

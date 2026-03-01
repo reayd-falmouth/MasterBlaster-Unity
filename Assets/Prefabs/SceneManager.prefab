@@ -47,7 +47,9 @@ MonoBehaviour:
   creditsScene: Credits
   titleScene: Title
   menuScene: Menu
+  countdownScene: Countdown
   gameScene: Game
   standingsScene: Standings
   wheelScene: Wheel
   shopScene: Shop
+  oversScene: Overs

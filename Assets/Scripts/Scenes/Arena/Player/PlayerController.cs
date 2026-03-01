@@ -176,12 +176,9 @@ namespace Scenes.Arena.Player
 
         public void ApplyUpgrades()
         {
-            // Ensure we have a valid Player ID to look up preferences
+            // No valid ID yet (e.g. OnEnable fired before GameManager.EnablePlayer assigned one); skip until we have one
             if (playerId <= 0)
-            {
-                Debug.LogError("[PlayerController] Cannot apply upgrades: Player ID is invalid.");
                 return;
-            }
             // SessionManager may not exist in this scene (e.g. Game before Shop); treat as no upgrades
             if (SessionManager.Instance == null)
                 return;
