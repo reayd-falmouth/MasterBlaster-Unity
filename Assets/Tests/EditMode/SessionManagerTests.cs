@@ -88,4 +88,58 @@ public class SessionManagerTests
         Assert.That(_sessionManager.PlayerUpgrades.ContainsKey(2), Is.True);
         Assert.That(_sessionManager.PlayerUpgrades.ContainsKey(3), Is.True);
     }
+
+    [Test]
+    public void Initialize_WithTwoPlayers_AllCoinsZero()
+    {
+        _sessionManager.Initialize(2);
+        Assert.That(_sessionManager.GetCoins(1), Is.EqualTo(0));
+        Assert.That(_sessionManager.GetCoins(2), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void GetCoins_UnknownPlayer_ReturnsZero()
+    {
+        _sessionManager.Initialize(2);
+        Assert.That(_sessionManager.GetCoins(99), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void SetCoins_ThenGetCoins_ReturnsSetValue()
+    {
+        _sessionManager.Initialize(2);
+        _sessionManager.SetCoins(1, 5);
+        _sessionManager.SetCoins(2, 3);
+        Assert.That(_sessionManager.GetCoins(1), Is.EqualTo(5));
+        Assert.That(_sessionManager.GetCoins(2), Is.EqualTo(3));
+    }
+
+    [Test]
+    public void AddCoins_IncreasesTotal()
+    {
+        _sessionManager.Initialize(2);
+        _sessionManager.AddCoins(1, 1);
+        Assert.That(_sessionManager.GetCoins(1), Is.EqualTo(1));
+        _sessionManager.AddCoins(1, 2);
+        Assert.That(_sessionManager.GetCoins(1), Is.EqualTo(3));
+        Assert.That(_sessionManager.GetCoins(2), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void SetCoins_UnknownPlayer_DoesNotThrow()
+    {
+        _sessionManager.Initialize(2);
+        Assert.DoesNotThrow(() => _sessionManager.SetCoins(99, 10));
+        Assert.That(_sessionManager.GetCoins(99), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Initialize_ClearsPreviousPlayerCoins()
+    {
+        _sessionManager.Initialize(2);
+        _sessionManager.SetCoins(1, 5);
+        _sessionManager.Initialize(2);
+        Assert.That(_sessionManager.GetCoins(1), Is.EqualTo(0));
+        Assert.That(_sessionManager.GetCoins(2), Is.EqualTo(0));
+    }
 }

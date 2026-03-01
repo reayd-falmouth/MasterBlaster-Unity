@@ -1,4 +1,4 @@
-﻿using Core;
+using Core;
 using Scenes.Shop;
 using UnityEngine;
 using UnityEngine.UI;
@@ -132,18 +132,16 @@ namespace Scenes.MainMenu
             PlayerPrefs.SetInt("NormalLevel", normalLevel ? 1 : 0);
             PlayerPrefs.SetInt("Gambling", gambling ? 1 : 0);
 
-            // Reset per-player progress
+            // Reset per-player progress (wins in PlayerPrefs; coins/upgrades in SessionManager)
             for (int i = 1; i <= 5; i++)
             {
                 PlayerPrefs.SetInt($"Player{i}_Wins", 0);
-                PlayerPrefs.SetInt($"Player{i}_Coins", 0);
-
-                // clear all shop upgrades
-                foreach (ShopItemType type in System.Enum.GetValues(typeof(ShopItemType)))
-                {
-                    PlayerPrefs.DeleteKey($"Player{i}_{type}");
-                }
             }
+
+            // Reset in-memory upgrade state for new game (SessionManager is source of truth for upgrades)
+            // SessionManager may not exist in the Menu scene; it is created in Shop/Game. Guard so we don't throw and block SignalMenuStart().
+            if (SessionManager.Instance != null)
+                SessionManager.Instance.Initialize(players);
 
             PlayerPrefs.Save();
         }

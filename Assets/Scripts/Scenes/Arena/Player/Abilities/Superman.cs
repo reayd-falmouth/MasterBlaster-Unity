@@ -1,4 +1,5 @@
-﻿using Scenes.Arena.Bomb;
+using Core;
+using Scenes.Arena.Bomb;
 using Scenes.Arena.Map;
 using Scenes.Shop;
 using UnityEngine;
@@ -42,8 +43,13 @@ namespace Scenes.Arena.Player.Abilities
 
         private void ApplyUpgrades()
         {
+            if (SessionManager.Instance == null)
+            {
+                active = false;
+                return;
+            }
             var playerId = pc.playerId;
-            active = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Superman}", 0) == 1;
+            active = SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Superman) == 1;
             Debug.Log($"[PlayerController] Player {playerId} superman applied.");
         }
 

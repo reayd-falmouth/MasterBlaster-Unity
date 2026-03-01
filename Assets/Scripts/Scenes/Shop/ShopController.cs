@@ -47,8 +47,15 @@ namespace Scenes.Shop
         {
             playerCount = PlayerPrefs.GetInt("Players", 2);
             currentPlayer = 1; // start with Player 1
-            // 🔹 Initialise upgrades for all players (coins are left alone)
-            SessionManager.Instance.Initialize(playerCount);
+            // Only initialize SessionManager if not yet set (e.g. first time); do not wipe state between rounds
+            if (
+                SessionManager.Instance.PlayerUpgrades == null
+                || SessionManager.Instance.PlayerUpgrades.Count == 0
+                || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)
+            )
+            {
+                SessionManager.Instance.Initialize(playerCount);
+            }
 
             UpdateMenuText();
             UpdatePointers();
@@ -135,7 +142,8 @@ namespace Scenes.Shop
                 Destroy(child.gameObject);
 
             int playerId = currentPlayer;
-            int coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+            int coins =
+                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
 
             for (int i = 0; i < coins; i++)
             {
@@ -171,19 +179,20 @@ namespace Scenes.Shop
                 return;
             }
 
-            // Normal purchase flow
+            // Normal purchase flow (coins in SessionManager)
             int playerId = currentPlayer;
-            int coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+            int coins =
+                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
 
             if (ShopPurchaseLogic.CanAfford(coins, item.cost))
             {
                 coins -= item.cost;
-                PlayerPrefs.SetInt($"Player{playerId}_Coins", coins);
+                if (SessionManager.Instance != null)
+                    SessionManager.Instance.SetCoins(playerId, coins);
                 AudioController.I.PlayBuy();
 
                 ApplyUpgrade(playerId, item.type);
 
-                PlayerPrefs.Save();
                 Debug.Log($"Player {playerId} bought {item.name}!");
             }
             else
@@ -198,10 +207,9 @@ namespace Scenes.Shop
             if (type == ShopItemType.Exit)
                 return;
 
-            string key = $"Player{playerId}_{type}"; // e.g. "Player1_SpeedUp"
-            int currentLevel = PlayerPrefs.GetInt(key, 0);
+            int currentLevel = SessionManager.Instance.GetUpgradeLevel(playerId, type);
             int newLevel = ShopPurchaseLogic.GetNewLevelAfterPurchase(type, currentLevel);
-            PlayerPrefs.SetInt(key, newLevel);
+            SessionManager.Instance.SetUpgradeLevel(playerId, type, newLevel);
         }
     }
 }

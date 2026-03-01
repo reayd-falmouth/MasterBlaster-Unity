@@ -37,13 +37,28 @@ namespace Scenes.Arena
         {
             players = GameObject.FindGameObjectsWithTag("Player");
             int playerCount = PlayerPrefs.GetInt("Players", 2);
+
+            // Ensure SessionManager has structure for this game (e.g. first round from menu); do not re-initialize when returning from shop
+            // SessionManager may not exist in the Game scene (e.g. Menu→Countdown→Game); if null, skip so SetupPlayers still runs and only N players show
+            if (
+                SessionManager.Instance != null
+                && (
+                    SessionManager.Instance.PlayerUpgrades == null
+                    || SessionManager.Instance.PlayerUpgrades.Count == 0
+                    || !SessionManager.Instance.PlayerUpgrades.ContainsKey(1)
+                )
+            )
+            {
+                SessionManager.Instance.Initialize(playerCount);
+            }
+
             SetupPlayers(playerCount);
 
-            // 🔹 Force upgrades to be reapplied every new game round
+            // 🔹 Force upgrades to be reapplied every new game round (only when SessionManager exists)
             foreach (var p in players)
             {
                 var pc = p.GetComponent<PlayerController>();
-                if (pc != null)
+                if (pc != null && SessionManager.Instance != null)
                     pc.ApplyUpgrades();
             }
 
@@ -155,6 +170,7 @@ namespace Scenes.Arena
 
         private void Standings()
         {
+            SyncCoinsToSessionManager();
             SceneFlowManager.I.GoTo(FlowState.Standings);
         }
 
@@ -163,7 +179,7 @@ namespace Scenes.Arena
         private void EndGame()
         {
             Debug.Log("[GameManager] Timer expired → game over!");
-            // Option A: go directly to Standings
+            SyncCoinsToSessionManager();
             SceneFlowManager.I.GoTo(FlowState.Standings);
         }
 
@@ -175,14 +191,39 @@ namespace Scenes.Arena
 
         void GivePlayersStartCoin()
         {
-            foreach (var p in players)
+            if (SessionManager.Instance == null)
+                return;
+            int count = PlayerPrefs.GetInt("Players", 2);
+            var setup = ArenaLogic.GetPlayerSetup(count);
+            foreach (var (slot, playerId) in setup)
             {
-                var movement = p.GetComponent<PlayerController>();
+                var playerObj = GetPlayerObject(slot);
+                if (playerObj == null)
+                    continue;
+                var movement = playerObj.GetComponent<PlayerController>();
                 if (movement != null)
                 {
-                    movement.coins += 1;
-                    Debug.Log($"{p.name} given 1 start coin (total: {movement.coins})");
+                    SessionManager.Instance.AddCoins(playerId, 1);
+                    movement.coins = SessionManager.Instance.GetCoins(playerId);
+                    Debug.Log(
+                        $"{playerObj.name} (Player {playerId}) given 1 start coin (total: {movement.coins})"
+                    );
                 }
+            }
+        }
+
+        /// <summary>Push each active player's in-memory coins to SessionManager so Shop sees current totals.</summary>
+        void SyncCoinsToSessionManager()
+        {
+            if (SessionManager.Instance == null || players == null)
+                return;
+            foreach (var p in players)
+            {
+                if (p == null || !p.activeInHierarchy)
+                    continue;
+                var pc = p.GetComponent<PlayerController>();
+                if (pc != null)
+                    SessionManager.Instance.SetCoins(pc.playerId, pc.coins);
             }
         }
 

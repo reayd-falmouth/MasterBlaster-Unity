@@ -249,34 +249,43 @@ namespace Scenes.Arena.Bomb
 
         public void ApplyUpgrades(int playerId)
         {
+            if (Core.SessionManager.Instance == null)
+                return;
             // Reset to base values first
             bombsRemaining = bombAmount;
             timeBomb = false;
             remoteBomb = false;
 
             // Extra bombs
-            int extraBombs = PlayerPrefs.GetInt(
-                $"Player{playerId}_{Scenes.Shop.ShopItemType.ExtraBomb}",
-                0
+            int extraBombs = Core.SessionManager.Instance.GetUpgradeLevel(
+                playerId,
+                Scenes.Shop.ShopItemType.ExtraBomb
             );
             bombAmount += extraBombs;
             bombsRemaining = bombAmount;
 
             // Blast radius
-            int powerUps = PlayerPrefs.GetInt(
-                $"Player{playerId}_{Scenes.Shop.ShopItemType.PowerUp}",
-                0
+            int powerUps = Core.SessionManager.Instance.GetUpgradeLevel(
+                playerId,
+                Scenes.Shop.ShopItemType.PowerUp
             );
             explosionRadius += powerUps;
 
             // Timebomb toggle
-            if (PlayerPrefs.GetInt($"Player{playerId}_{Scenes.Shop.ShopItemType.Timebomb}", 0) == 1)
+            if (
+                Core.SessionManager.Instance.GetUpgradeLevel(
+                    playerId,
+                    Scenes.Shop.ShopItemType.Timebomb
+                ) == 1
+            )
                 timeBomb = true;
 
             // Remote bomb toggle
             if (
-                PlayerPrefs.GetInt($"Player{playerId}_{Scenes.Shop.ShopItemType.Controller}", 0)
-                == 1
+                Core.SessionManager.Instance.GetUpgradeLevel(
+                    playerId,
+                    Scenes.Shop.ShopItemType.Controller
+                ) == 1
             )
                 remoteBomb = true;
 

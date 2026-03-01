@@ -182,6 +182,9 @@ namespace Scenes.Arena.Player
                 Debug.LogError("[PlayerController] Cannot apply upgrades: Player ID is invalid.");
                 return;
             }
+            // SessionManager may not exist in this scene (e.g. Game before Shop); treat as no upgrades
+            if (SessionManager.Instance == null)
+                return;
 
             // Reset player stats that are affected by stackable upgrades (like speed, bomb stats)
             // NOTE: You'll need to reset other stats here if they are affected by stackable upgrades.
@@ -189,15 +192,19 @@ namespace Scenes.Arena.Player
             // and this function is called on start/enable.
             speed = 5f;
 
-            // Coins
-            coins = PlayerPrefs.GetInt($"Player{playerId}_Coins", 0);
+            // Coins (session-only, from SessionManager)
+            coins =
+                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
 
             // ---------------------------------------------------------------------------------
             // 🔁 STACKABLE UPGRADES (PowerUp, ExtraBomb, SpeedUp)
             // ---------------------------------------------------------------------------------
 
             // Speed boost (stackable) - Multiplies base speed
-            int speedBoost = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.SpeedUp}", 0);
+            int speedBoost = SessionManager.Instance.GetUpgradeLevel(
+                playerId,
+                ShopItemType.SpeedUp
+            );
             if (speedBoost > 0)
             {
                 // Based on existing code: speed is upgraded by 2 units per stack
@@ -208,9 +215,9 @@ namespace Scenes.Arena.Player
             }
 
             // Extra Bomb (stackable) - Increases max bomb count
-            int extraBombCount = PlayerPrefs.GetInt(
-                $"Player{playerId}_{ShopItemType.ExtraBomb}",
-                0
+            int extraBombCount = SessionManager.Instance.GetUpgradeLevel(
+                playerId,
+                ShopItemType.ExtraBomb
             );
             if (extraBombCount > 0)
             {
@@ -222,7 +229,10 @@ namespace Scenes.Arena.Player
             }
 
             // Power Up (stackable) - Increases bomb range/power
-            int powerUpCount = PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.PowerUp}", 0);
+            int powerUpCount = SessionManager.Instance.GetUpgradeLevel(
+                playerId,
+                ShopItemType.PowerUp
+            );
             if (powerUpCount > 0)
             {
                 // You will need to access and modify the BombController's explosion size/power here.
@@ -237,7 +247,7 @@ namespace Scenes.Arena.Player
             // ---------------------------------------------------------------------------------
 
             // Superman (Toggle) - Allows walking through walls
-            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Superman}", 0) == 1)
+            if (SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Superman) == 1)
             {
                 // You need to add or enable a component/ability script that handles wall-passing.
                 // Example: GetComponent<SupermanAbility>().Activate();
@@ -245,7 +255,7 @@ namespace Scenes.Arena.Player
             }
 
             // Ghost (Toggle) - Allows walking through bombs
-            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Ghost}", 0) == 1)
+            if (SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Ghost) == 1)
             {
                 // You need to add or enable a component/ability script that disables collision with bombs.
                 // Example: GetComponent<GhostAbility>().Activate();
@@ -253,7 +263,7 @@ namespace Scenes.Arena.Player
             }
 
             // Protection (Toggle) - Protects against one death
-            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Protection}", 0) == 1)
+            if (SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Protection) == 1)
             {
                 // You need to add or enable a component/ability script that listens to OnExplosionHit
                 // and returns 'true' once to block the death sequence.
@@ -262,7 +272,7 @@ namespace Scenes.Arena.Player
             }
 
             // Controller (Toggle) - Allows remote detonation of bombs
-            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Controller}", 0) == 1)
+            if (SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Controller) == 1)
             {
                 // You need to enable the remote bomb functionality in the BombController.
                 // This is separate from the remote *visual* state.
@@ -271,7 +281,7 @@ namespace Scenes.Arena.Player
             }
 
             // Timebomb (Toggle) - Allows setting bomb fuse time
-            if (PlayerPrefs.GetInt($"Player{playerId}_{ShopItemType.Timebomb}", 0) == 1)
+            if (SessionManager.Instance.GetUpgradeLevel(playerId, ShopItemType.Timebomb) == 1)
             {
                 // You need to enable the ability to set the time in the BombController.
                 // Example: GetComponent<BombController>().EnableTimebombFeature();
@@ -316,8 +326,12 @@ namespace Scenes.Arena.Player
 
         public void AddCoin()
         {
-            coins++;
-            PlayerPrefs.SetInt($"Player{playerId}_Coins", coins);
+            if (SessionManager.Instance != null)
+                SessionManager.Instance.AddCoins(playerId, 1);
+            coins =
+                SessionManager.Instance != null
+                    ? SessionManager.Instance.GetCoins(playerId)
+                    : coins + 1;
             Debug.Log($"[PlayerController] Player {playerId} coins increased to {coins}");
         }
 
