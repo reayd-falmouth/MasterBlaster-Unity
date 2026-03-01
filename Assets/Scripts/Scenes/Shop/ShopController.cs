@@ -37,6 +37,14 @@ namespace Scenes.Shop
             return index == selectedIndex ? "> " : "  ";
         }
 
+        /// <summary>
+        /// Returns the coin count to display for a player (from SessionManager). Used by RefreshCoinsDisplay and by tests.
+        /// </summary>
+        public static int GetCoinsToDisplayForPlayer(int playerId)
+        {
+            return SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
+        }
+
         private void Awake()
         {
             if (items != null && items.Length > 0)
@@ -137,13 +145,15 @@ namespace Scenes.Shop
 
         void RefreshCoinsDisplay()
         {
-            // Clear old coins
-            foreach (Transform child in coinContainer)
-                Destroy(child.gameObject);
+            if (coinContainer == null)
+                return;
+
+            // Clear old coins immediately so scene placeholders don't stick (Destroy is deferred)
+            for (int i = coinContainer.childCount - 1; i >= 0; i--)
+                Object.DestroyImmediate(coinContainer.GetChild(i).gameObject);
 
             int playerId = currentPlayer;
-            int coins =
-                SessionManager.Instance != null ? SessionManager.Instance.GetCoins(playerId) : 0;
+            int coins = GetCoinsToDisplayForPlayer(playerId);
 
             for (int i = 0; i < coins; i++)
             {
