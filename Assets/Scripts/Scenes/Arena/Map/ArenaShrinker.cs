@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Core;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
@@ -216,9 +216,10 @@ namespace Scenes.Arena.Map
 
         public void StartAlarm()
         {
-            if (alarmSource == null)
-                return;
-            if (!alarmSource.isPlaying)
+            alarmActive = true;
+            if (Core.AudioController.I != null)
+                Core.AudioController.I.PlayAlarmLoop();
+            else if (alarmSource != null && !alarmSource.isPlaying)
             {
                 alarmSource.volume = 0.8f;
                 alarmSource.loop = true;
@@ -228,10 +229,17 @@ namespace Scenes.Arena.Map
 
         public void StopAlarm()
         {
+            alarmActive = false;
+            if (Core.AudioController.I != null)
+                Core.AudioController.I.StopAlarm();
             if (alarmSource != null && alarmSource.isPlaying)
-            {
                 alarmSource.Stop();
-            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Core.AudioController.I != null)
+                Core.AudioController.I.StopAlarm();
         }
 
         // ------------ Shrinking (clockwise snake, inside border) ------------
@@ -341,7 +349,7 @@ namespace Scenes.Arena.Map
                     rbc.Detonate(); // preferred path
                     continue;
                 }
-                if (h.CompareTag("Item") || h.GetComponent<Destructible>() != null)
+                if (h.GetComponent<ItemPickup>() != null || h.GetComponent<Destructible>() != null)
                 {
                     Destroy(h.gameObject);
                     continue;

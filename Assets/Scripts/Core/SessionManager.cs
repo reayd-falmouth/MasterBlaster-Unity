@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Scenes.Shop;
+using UnityEngine;
 using Utilities;
 
 namespace Core
@@ -23,6 +24,9 @@ namespace Core
         /// <summary>Session-only: display name of match winner. Set when transitioning to Overs, cleared on new game.</summary>
         public string MatchWinnerName;
 
+        /// <summary>Player ID -> device index (0 = keyboard, 1+ = joystick). Missing or -1 means AI.</summary>
+        private Dictionary<int, int> _playerDeviceIndex = new Dictionary<int, int>();
+
         // 3. Setup/Cleanup Method
         public void Initialize(int playerCount)
         {
@@ -31,6 +35,7 @@ namespace Core
             PlayerWins.Clear();
             MatchWinnerPlayerId = 0;
             MatchWinnerName = null;
+            _playerDeviceIndex.Clear();
             for (int id = 1; id <= playerCount; id++)
             {
                 // Initialize each player with a dictionary to store their upgrades
@@ -113,6 +118,45 @@ namespace Core
         public string GetMatchWinnerName()
         {
             return string.IsNullOrEmpty(MatchWinnerName) ? "Unknown" : MatchWinnerName;
+        }
+
+        /// <summary>Assign input devices to players: device 0 = keyboard, 1+ = joysticks. Slots without a device get AI. Call after Initialize(playerCount).</summary>
+        public void AssignInputDevices(int playerCount)
+        {
+            _playerDeviceIndex.Clear();
+            int deviceCount = 1 + GetConnectedJoystickCount();
+            int nextDevice = 0;
+            for (int id = 1; id <= playerCount; id++)
+            {
+                if (nextDevice < deviceCount)
+                {
+                    _playerDeviceIndex[id] = nextDevice;
+                    nextDevice++;
+                }
+                else
+                {
+                    _playerDeviceIndex[id] = -1; // AI
+                }
+            }
+        }
+
+        private static int GetConnectedJoystickCount()
+        {
+            int count = 0;
+            foreach (string name in Input.GetJoystickNames())
+            {
+                if (!string.IsNullOrEmpty(name))
+                    count++;
+            }
+            return count;
+        }
+
+        /// <summary>Returns assigned device index for the player (0 = keyboard, 1+ = joystick), or null if this player is AI.</summary>
+        public int? GetAssignedDevice(int playerId)
+        {
+            if (!_playerDeviceIndex.TryGetValue(playerId, out int index) || index < 0)
+                return null;
+            return index;
         }
     }
 }

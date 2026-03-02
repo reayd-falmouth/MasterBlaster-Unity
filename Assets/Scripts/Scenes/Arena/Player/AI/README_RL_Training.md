@@ -1,0 +1,106 @@
+# Training the Bomberman AI with Reinforcement Learning
+
+The game uses **Unity ML-Agents** so AI players can be controlled by a trained neural network instead of the scripted brain. This document explains how to train the agent.
+
+## Prerequisites
+
+1. **Unity ML-Agents package** (already in the project): `com.unity.ml-agents` 4.0.0.
+2. **Python 3.10** (e.g. 3.10.12) with the ML-Agents Python package:
+   ```bash
+   pip install mlagents==1.1.0
+   ```
+
+## Enabling RL in the Game
+
+1. In the **Game** scene, select the GameObject that has the **GameManager** component.
+2. In the Inspector, under **AI**, enable **Use Reinforcement Learning**.
+3. With this on, any player slot that gets AI (no controller assigned) will use the **BombermanAgent** + **MLAgentsBrain** instead of the scripted AI.
+4. Without a trained model, the agent falls back to its **Heuristic** (built-in rule-based behavior). After training, assign the `.onnx` model to the agent’s **Behavior Parameters** for inference.
+
+## Agent Setup (Automatic)
+
+When **Use Reinforcement Learning** is enabled, the GameManager adds these components to AI players at runtime:
+
+- **BombermanAgent** – observations, actions, rewards, heuristic.
+- **BehaviorParameters** – created in code with:
+  - Vector Observation Size: **15**
+  - Discrete branches: **5, 2, 2** (move, place bomb, detonate).
+- **MLAgentsBrain** – adapts the agent to the existing `IAIBrain` / `AIPlayerInput` flow.
+
+No manual setup is required for training or inference beyond enabling **Use Reinforcement Learning** and (after training) assigning the model.
+
+## Observations (15 floats)
+
+| Index | Description |
+|-------|-------------|
+| 0–1   | My position (x, y) normalized by arena scale |
+| 2–4   | Nearest opponent: relative (dx, dy), distance (normalized) |
+| 5–7   | Nearest bomb: relative (dx, dy), radius (normalized) |
+| 8     | Is my current cell in explosion danger (0 or 1) |
+| 9–10  | Bombs remaining and explosion radius (normalized) |
+| 11–12 | Nearest item relative (dx, dy) if any |
+| 13–14 | Reserved / padding |
+
+## Actions (discrete)
+
+- **Branch 0 – Move:** 0 = none, 1 = up, 2 = down, 3 = left, 4 = right.
+- **Branch 1 – Place bomb:** 0 = no, 1 = yes.
+- **Branch 2 – Detonate (remote):** 0 = hold (don’t detonate), 1 = release (detonate).
+
+## Rewards (tunable on BombermanAgent)
+
+- **rewardPerStep** (default 0.001) – small reward each fixed step to encourage surviving.
+- **rewardKillOpponent** (default 1) – when the number of active opponents decreases.
+- **rewardCollectItem** (default 0.3) – when the agent collects a power-up (if hooked up).
+- **rewardDeath** (default -1) – when the agent dies; also ends the episode.
+
+## Training with the ML-Agents Python API
+
+1. **Build a training build** (or use the Editor with the ML-Agents training flag).
+2. Create a YAML config (see `bomberman_config.yaml` in this folder or below).
+3. Run training, e.g.:
+   ```bash
+   mlagents-learn bomberman_config.yaml --run-id=bomberman_v1
+   ```
+4. When prompted, press Play in Unity (or start the built executable). The Python process will connect and train.
+5. Trained artifacts are written to `results/bomberman_v1/`. Use the generated `.onnx` file as the model in the agent’s **Behavior Parameters** (Model) for inference in the game.
+
+## Example YAML config (save as `bomberman_config.yaml`)
+
+```yaml
+behaviors:
+  Bomberman:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 1024
+      buffer_size: 10240
+      learning_rate: 3.0e-4
+      learning_rate_schedule: linear
+      beta: 5.0e-3
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+    network_settings:
+      normalize: true
+      hidden_units: 256
+      num_layers: 2
+      vis_encoder: null
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+    max_steps: 500000
+    time_horizon: 512
+    summary_freq: 5000
+    keep_checkpoints: 3
+    checkpoint_interval: 20000
+```
+
+Adjust `max_steps`, `time_horizon`, and `hyperparameters` as needed. The **Behavior Name** in your Unity **Behavior Parameters** must match the key under `behaviors` (e.g. `Bomberman`).
+
+## Tips
+
+- Train with **2 players** (one human/keyboard, one AI) so episodes are short and the agent gets many kill/death signals.
+- Increase **Max Step** in the Academy or let rounds end naturally so episodes don’t run forever.
+- If the agent never explores bombing, try increasing the reward for placing a bomb when an opponent is nearby (e.g. a small bonus in the agent code when `LastPlaceBomb` and an opponent is in range), or train longer.
+- Use the **Heuristic** in the Editor (no model assigned) to verify observations and actions; the agent will behave like the scripted AI.

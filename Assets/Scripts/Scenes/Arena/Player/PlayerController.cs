@@ -34,6 +34,7 @@ namespace Scenes.Arena.Player
         public bool stop;
 
         private RemoteBombController pushingBomb;
+        private IPlayerInput _inputProvider;
 
         [Header("Input")]
         public KeyCode inputUp = KeyCode.W;
@@ -81,6 +82,7 @@ namespace Scenes.Arena.Player
                 playerId = 1;
             }
 
+            _inputProvider = GetComponent<IPlayerInput>();
             ApplyUpgrades();
         }
 
@@ -90,26 +92,37 @@ namespace Scenes.Arena.Player
             if (visualState == PlayerVisualState.Remote)
                 return;
 
-            if (Input.GetKey(inputUp))
+            Vector2 move = _inputProvider != null ? _inputProvider.GetMoveDirection() : GetLegacyMove();
+            if (move.sqrMagnitude > 0.01f)
             {
-                SetDirection(Vector2.up, spriteRendererUp);
-            }
-            else if (Input.GetKey(inputDown))
-            {
-                SetDirection(Vector2.down, spriteRendererDown);
-            }
-            else if (Input.GetKey(inputLeft))
-            {
-                SetDirection(Vector2.left, spriteRendererLeft);
-            }
-            else if (Input.GetKey(inputRight))
-            {
-                SetDirection(Vector2.right, spriteRendererRight);
+                if (Mathf.Abs(move.x) >= Mathf.Abs(move.y))
+                {
+                    if (move.x > 0)
+                        SetDirection(Vector2.right, spriteRendererRight);
+                    else
+                        SetDirection(Vector2.left, spriteRendererLeft);
+                }
+                else
+                {
+                    if (move.y > 0)
+                        SetDirection(Vector2.up, spriteRendererUp);
+                    else
+                        SetDirection(Vector2.down, spriteRendererDown);
+                }
             }
             else
             {
                 SetDirection(Vector2.zero, activeSpriteRenderer);
             }
+        }
+
+        private Vector2 GetLegacyMove()
+        {
+            if (Input.GetKey(inputUp)) return Vector2.up;
+            if (Input.GetKey(inputDown)) return Vector2.down;
+            if (Input.GetKey(inputLeft)) return Vector2.left;
+            if (Input.GetKey(inputRight)) return Vector2.right;
+            return Vector2.zero;
         }
 
         private void FixedUpdate()
@@ -152,6 +165,10 @@ namespace Scenes.Arena.Player
         {
             enabled = false;
             GetComponent<BombController>().enabled = false;
+
+            var rlAgent = GetComponent<Scenes.Arena.Player.AI.BombermanAgent>();
+            if (rlAgent != null)
+                rlAgent.NotifyDeath();
 
             visualState = PlayerVisualState.Death;
             UpdateVisualState();

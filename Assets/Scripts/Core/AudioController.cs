@@ -48,6 +48,9 @@ namespace Core
         private AudioClip alarm;
 
         [SerializeField]
+        private AudioSource alarmSource;
+
+        [SerializeField]
         private AudioClip arenaMusic;
 
         [Header("Standings")]
@@ -133,7 +136,7 @@ namespace Core
             EnsureSource(ref musicSource, "Music", loop: false, output: musicMixerGroup);
             // EnsureSource(ref ambienceSource, "Ambience", loop: true, output: musicMixerGroup);
             EnsureSource(ref sfxSource, "SFX", loop: false, output: soundFxMixerGroup);
-            EnsureSource(ref sfxSource, "Alarm", loop: false, output: soundFxMixerGroup);
+            EnsureSource(ref alarmSource, "Alarm", loop: true, output: soundFxMixerGroup);
         }
 
         private void Update()
@@ -194,6 +197,28 @@ namespace Core
         }
 
         public void StopMusic() => StopSource(musicSource);
+
+        #endregion
+
+        #region Public – Arena Alarm
+
+        /// <summary>Plays the alarm clip on loop (e.g. when arena time threshold is reached). Stops when StopAlarm is called or scene leaves arena.</summary>
+        public void PlayAlarmLoop()
+        {
+            if (alarm == null || alarmSource == null)
+                return;
+            alarmSource.clip = alarm;
+            alarmSource.loop = true;
+            alarmSource.volume = 0.8f;
+            alarmSource.Play();
+        }
+
+        /// <summary>Stops the arena alarm if playing.</summary>
+        public void StopAlarm()
+        {
+            if (alarmSource != null && alarmSource.isPlaying)
+                alarmSource.Stop();
+        }
 
         #endregion
 

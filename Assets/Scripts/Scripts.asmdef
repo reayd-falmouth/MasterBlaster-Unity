@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "UnityEngine",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.MLAgents"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -34,6 +34,7 @@ namespace Scenes.Arena.Bomb
 
         private int baseBombAmount;
         private int baseExplosionRadius;
+        private Player.IPlayerInput _inputProvider;
 
         private void Awake()
         {
@@ -41,12 +42,18 @@ namespace Scenes.Arena.Bomb
             baseExplosionRadius = explosionRadius;
         }
 
+        private void Start()
+        {
+            _inputProvider = GetComponent<Player.IPlayerInput>();
+        }
+
         private void Update()
         {
             if (bombsRemaining <= 0)
                 return;
 
-            if (Input.GetKeyDown(inputKey))
+            bool wantBomb = _inputProvider != null ? _inputProvider.GetBombDown() : Input.GetKeyDown(inputKey);
+            if (wantBomb)
             {
                 GameObject bomb = SpawnBomb();
                 if (bomb == null)
@@ -86,6 +93,8 @@ namespace Scenes.Arena.Bomb
                     return null;
 
             GameObject bomb = Instantiate(bombPrefab, position, Quaternion.identity);
+            var info = bomb.AddComponent<BombInfo>();
+            info.explosionRadius = explosionRadius;
             activeBombs.Add(bomb);
             bombsRemaining--;
 

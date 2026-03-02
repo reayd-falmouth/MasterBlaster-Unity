@@ -3,6 +3,7 @@ using System.Collections;
 using Core;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
+using Scenes.Arena.Player.AI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
@@ -27,6 +28,10 @@ namespace Scenes.Arena
         [SerializeField]
         private bool startMoney;
 
+        [Header("AI")]
+        [Tooltip("If true, AI players use reinforcement learning (ML-Agents). Requires Behavior Parameters on agent and a trained model for best results. If false, uses scripted AI.")]
+        [SerializeField] private bool useReinforcementLearning;
+
         [Header("Assign the 5 players in inspector")]
         public GameObject topLeftPlayer;
         public GameObject topRightPlayer;
@@ -36,7 +41,15 @@ namespace Scenes.Arena
 
         private void Start()
         {
-            players = GameObject.FindGameObjectsWithTag("Player");
+            // Use assigned references so we have all 5 players even when some start inactive (AI needs GetPlayers() to find opponents)
+            players = new[]
+            {
+                topLeftPlayer,
+                topRightPlayer,
+                bottomLeftPlayer,
+                bottomRightPlayer,
+                middlePlayer
+            };
             int playerCount = PlayerPrefs.GetInt("Players", 2);
 
             // Ensure SessionManager has structure for this game (e.g. first round from menu); do not re-initialize when returning from shop
@@ -52,6 +65,9 @@ namespace Scenes.Arena
             {
                 SessionManager.Instance.Initialize(playerCount);
             }
+
+            if (SessionManager.Instance != null)
+                SessionManager.Instance.AssignInputDevices(playerCount);
 
             SetupPlayers(playerCount);
 
@@ -131,7 +147,62 @@ namespace Scenes.Arena
                 movement.wins =
                     SessionManager.Instance != null ? SessionManager.Instance.GetWins(id) : 0;
             }
+
+            AttachInputProvider(playerObj, id, movement);
+
             playerObj.SetActive(true);
+        }
+
+        private void AttachInputProvider(GameObject playerObj, int id, PlayerController movement)
+        {
+            // Remove any existing input components so we don't duplicate when re-entering scene
+            var existingHuman = playerObj.GetComponent<HumanPlayerInput>();
+            if (existingHuman != null)
+                Destroy(existingHuman);
+            var existingAI = playerObj.GetComponent<AIPlayerInput>();
+            if (existingAI != null)
+                Destroy(existingAI);
+            var existingBrain = playerObj.GetComponent<ScriptedAIBrain>();
+            if (existingBrain != null)
+                Destroy(existingBrain);
+            var existingMLAgent = playerObj.GetComponent<BombermanAgent>();
+            if (existingMLAgent != null)
+                Destroy(existingMLAgent);
+            var existingMLBrain = playerObj.GetComponent<MLAgentsBrain>();
+            if (existingMLBrain != null)
+                Destroy(existingMLBrain);
+
+            int? device = SessionManager.Instance != null ? SessionManager.Instance.GetAssignedDevice(id) : null;
+
+            if (device.HasValue && movement != null)
+            {
+                var human = playerObj.AddComponent<HumanPlayerInput>();
+                human.Init(
+                    device.Value,
+                    movement.inputUp,
+                    movement.inputDown,
+                    movement.inputLeft,
+                    movement.inputRight,
+                    playerObj.GetComponent<BombController>()?.inputKey ?? KeyCode.LeftShift,
+                    playerObj.GetComponent<BombController>()?.inputKey ?? KeyCode.LeftShift
+                );
+            }
+            else
+            {
+                if (UseReinforcementLearning)
+                {
+                    var agent = playerObj.AddComponent<BombermanAgent>();
+                    var mlBrain = playerObj.AddComponent<MLAgentsBrain>();
+                    var aiInput = playerObj.AddComponent<AIPlayerInput>();
+                    aiInput.Init(mlBrain);
+                }
+                else
+                {
+                    var brain = playerObj.AddComponent<ScriptedAIBrain>();
+                    var aiInput = playerObj.AddComponent<AIPlayerInput>();
+                    aiInput.Init(brain);
+                }
+            }
         }
 
         public void CheckWinState()

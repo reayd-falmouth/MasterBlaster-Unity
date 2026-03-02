@@ -93,13 +93,16 @@ namespace Scenes.Arena.Bomb
             if (detonated)
                 return;
 
-            // Detonation rules
-            if (mode == BombMode.Time && !Input.GetKey(detonateKey))
+            // Detonation rules: detonate when key is not held (or when AI releases)
+            bool detonateHeld = owner != null && owner.GetComponent<IPlayerInput>() != null
+                ? owner.GetComponent<IPlayerInput>().GetDetonateHeld()
+                : Input.GetKey(detonateKey);
+            if (mode == BombMode.Time && !detonateHeld)
             {
                 Detonate();
                 return;
             }
-            if (mode == BombMode.Remote && !Input.GetKey(detonateKey))
+            if (mode == BombMode.Remote && !detonateHeld)
             {
                 Detonate();
                 return;
@@ -109,14 +112,22 @@ namespace Scenes.Arena.Bomb
             if (mode == BombMode.Remote && owner != null)
             {
                 Vector2 input = Vector2.zero;
-                if (Input.GetKey(owner.inputUp))
-                    input = Vector2.up;
-                else if (Input.GetKey(owner.inputDown))
-                    input = Vector2.down;
-                else if (Input.GetKey(owner.inputLeft))
-                    input = Vector2.left;
-                else if (Input.GetKey(owner.inputRight))
-                    input = Vector2.right;
+                var provider = owner.GetComponent<IPlayerInput>();
+                if (provider != null)
+                {
+                    input = provider.GetMoveDirection();
+                }
+                else
+                {
+                    if (Input.GetKey(owner.inputUp))
+                        input = Vector2.up;
+                    else if (Input.GetKey(owner.inputDown))
+                        input = Vector2.down;
+                    else if (Input.GetKey(owner.inputLeft))
+                        input = Vector2.left;
+                    else if (Input.GetKey(owner.inputRight))
+                        input = Vector2.right;
+                }
 
                 SetDirection(input);
             }
