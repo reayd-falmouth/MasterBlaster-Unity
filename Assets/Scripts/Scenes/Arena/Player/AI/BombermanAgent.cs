@@ -61,6 +61,20 @@ namespace Scenes.Arena.Player.AI
             _opponentCountLastStep = GetActiveOpponentCount();
         }
 
+        private void OnDisable()
+        {
+            // Base Agent.CleanupSensors() can throw NullReferenceException when the agent is disabled
+            // before sensors are initialized (e.g. player death, scene unload). Guard to avoid crash.
+            try
+            {
+                base.OnDisable();
+            }
+            catch (System.NullReferenceException)
+            {
+                // Agent/sensors not fully initialized; skip base cleanup
+            }
+        }
+
         public override void CollectObservations(VectorSensor sensor)
         {
             if (sensor == null) return;

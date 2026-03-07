@@ -127,7 +127,22 @@ namespace Core
         [SerializeField, Range(0.05f, 5f)]
         private float defaultCrossfadeSeconds = 1.0f;
 
+        [Header("Arena Music Pitch")]
+        [Tooltip("Pitch for the first plays (normal speed). Increase if music still sounds too slow.")]
+        [SerializeField, Range(0.5f, 2f)]
+        private float arenaPitchBase = 1.25f;
+
+        [Tooltip("Extra pitch added every 4th time the track plays (on top of base).")]
+        [SerializeField, Range(0.01f, 0.2f)]
+        private float arenaPitchStep = 0.05f;
+
+        [Tooltip("Maximum pitch (stops increasing above this).")]
+        [SerializeField, Range(1f, 2.5f)]
+        private float arenaPitchMax = 2f;
+
         private int lastTrackIndex = -1; // -1 means "no track has been played yet"
+        private int arenaMusicPlayCount;
+        private float arenaPitchBaseSnapshot = -1f; // actual pitch on first play (from prefab/source), set once
 
         protected override void Awake()
         {
@@ -151,6 +166,10 @@ namespace Core
             }
             else
             {
+                arenaMusicPlayCount = 0;
+                arenaPitchBaseSnapshot = -1f;
+                if (musicSource != null)
+                    musicSource.pitch = arenaPitchBase;
                 StopMusic();
             }
         }
@@ -193,6 +212,21 @@ namespace Core
 
         public void PlayArenaMusic()
         {
+            if (musicSource == null)
+                return;
+
+            musicSource.loop = false;
+
+            arenaMusicPlayCount++;
+            if (arenaMusicPlayCount == 1)
+                arenaPitchBaseSnapshot = musicSource.pitch;
+            if (arenaPitchBaseSnapshot < 0f)
+                arenaPitchBaseSnapshot = arenaPitchBase;
+
+            int completedCycles = arenaMusicPlayCount / 4;
+            float pitch = arenaPitchBaseSnapshot + completedCycles * arenaPitchStep;
+            musicSource.pitch = Mathf.Min(pitch, arenaPitchMax);
+
             PlayMusic(arenaMusic, true);
         }
 

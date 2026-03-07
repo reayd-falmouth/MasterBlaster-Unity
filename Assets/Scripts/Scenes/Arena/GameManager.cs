@@ -50,10 +50,10 @@ namespace Scenes.Arena
                 bottomRightPlayer,
                 middlePlayer
             };
-            int playerCount = PlayerPrefs.GetInt("Players", 2);
+            int playerCount = TrainingMode.IsActive ? 2 : PlayerPrefs.GetInt("Players", 2);
 
             // Ensure SessionManager has structure for this game (e.g. first round from menu); do not re-initialize when returning from shop
-            // SessionManager may not exist in the Game scene (e.g. Menu→Countdown→Game); if null, skip so SetupPlayers still runs and only N players show
+            // SessionManager may not exist in the Game scene (e.g. Menu→Countdown→Game or training build); if null, skip so SetupPlayers still runs and only N players show
             if (
                 SessionManager.Instance != null
                 && (
@@ -66,7 +66,8 @@ namespace Scenes.Arena
                 SessionManager.Instance.Initialize(playerCount);
             }
 
-            if (SessionManager.Instance != null)
+            // In training mode, do not assign devices so every slot is AI (all RL agents)
+            if (!TrainingMode.IsActive && SessionManager.Instance != null)
                 SessionManager.Instance.AssignInputDevices(playerCount);
 
             SetupPlayers(playerCount);
@@ -172,7 +173,8 @@ namespace Scenes.Arena
             if (existingMLBrain != null)
                 Destroy(existingMLBrain);
 
-            int? device = SessionManager.Instance != null ? SessionManager.Instance.GetAssignedDevice(id) : null;
+            // In training mode, all players are RL agents (no human)
+            int? device = TrainingMode.IsActive ? null : (SessionManager.Instance != null ? SessionManager.Instance.GetAssignedDevice(id) : null);
 
             if (device.HasValue && movement != null)
             {
@@ -189,7 +191,7 @@ namespace Scenes.Arena
             }
             else
             {
-                if (UseReinforcementLearning)
+                if (TrainingMode.IsActive || useReinforcementLearning)
                 {
                     var agent = playerObj.AddComponent<BombermanAgent>();
                     var mlBrain = playerObj.AddComponent<MLAgentsBrain>();
@@ -267,6 +269,14 @@ namespace Scenes.Arena
 
                     if (result.Outcome == WinOutcome.GoToOvers || shouldGoToOvers)
                     {
+                        if (TrainingMode.IsActive)
+                        {
+                            var winnerAgent = lastAlive.GetComponent<BombermanAgent>();
+                            if (winnerAgent != null)
+                                winnerAgent.AddReward(0.5f);
+                            ReloadGameSceneAfterDelay(1.5f);
+                            return;
+                        }
                         if (SessionManager.Instance != null)
                             SessionManager.Instance.SetMatchWinner(
                                 movement.playerId,
@@ -278,7 +288,20 @@ namespace Scenes.Arena
                 }
             }
 
-            Invoke(nameof(Standings), 3f);
+            if (TrainingMode.IsActive)
+                ReloadGameSceneAfterDelay(1.5f);
+            else
+                Invoke(nameof(Standings), 3f);
+        }
+
+        private void ReloadGameSceneAfterDelay(float delay)
+        {
+            Invoke(nameof(ReloadGameScene), delay);
+        }
+
+        private void ReloadGameScene()
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
         private void Standings()

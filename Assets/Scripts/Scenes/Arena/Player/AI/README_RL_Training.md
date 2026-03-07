@@ -98,9 +98,42 @@ behaviors:
 
 Adjust `max_steps`, `time_horizon`, and `hyperparameters` as needed. The **Behavior Name** in your Unity **Behavior Parameters** must match the key under `behaviors` (e.g. `Bomberman`).
 
+## Autonomous training (no human play)
+
+To train rapidly without playing manually, use **training mode**: all players are RL agents, and the arena reloads automatically when a round ends so episodes repeat.
+
+### 1. Training mode flag
+
+Run the game (Editor or build) with the **`-training`** command-line argument. When `-training` is present, `TrainingMode.IsActive` is true: the Game scene uses a fixed 2 players, assigns no devices (all slots are AI), and every player gets `BombermanAgent` + `MLAgentsBrain`. When a round ends, the scene reloads instead of going to Standings.
+
+### 2. Game scene setup
+
+In the **Game** scene, add the **TrainingAcademyHelper** component (e.g. on the GameManager GameObject or an empty GameObject). When in training mode it subscribes to the ML-Agents Academy `OnEnvironmentReset`; on reset (e.g. after max steps) it reloads the Game scene. The Academy is auto-initialized by ML-Agents when agents run. Optionally add an **Academy** component in the Editor to configure **Max Step** (e.g. 2000–5000).
+
+### 3. Training build and entry
+
+For the **training** build, set the **Game** scene as the **first (index 0)** scene in **File → Build Settings** so the executable starts directly in the arena. Use **Server Build** for headless runs (no rendering, faster; suitable for multiple instances).
+
+### 4. Run autonomous training
+
+1. Start the Python trainer: `mlagents-learn bomberman_config.yaml --run-id=bomberman_v1`
+2. Run the training build with `-training`, e.g. `MasterBlaster.exe -training` (or `./MasterBlaster -training` on macOS/Linux).
+3. When the trainer prompts, press Play (or the build connects automatically). Episodes run autonomously: two RL agents play, the round ends, the scene reloads, and the next episode starts. No human input required.
+
+For **multiple parallel environments**, build headless, run multiple instances of the executable each with `-training` (use different `--worker-id` / `--base-port` per process if required by your ML-Agents version). The trainer connects to all and aggregates experience.
+
+### 5. Summary
+
+| Step | Action |
+|------|--------|
+| Scene | Game = first scene in Build Settings; add TrainingAcademyHelper in Game scene. |
+| Build | Optional: Server Build for headless. |
+| Run | `YourGame.exe -training` (or multiple instances). |
+| Train | `mlagents-learn bomberman_config.yaml --run-id=bomberman_v1` then connect. |
+
 ## Tips
 
-- Train with **2 players** (one human/keyboard, one AI) so episodes are short and the agent gets many kill/death signals.
+- Train with **2 players** so episodes are short. In autonomous training both are RL and the scene reloads each round; otherwise use one human and one AI.
 - Increase **Max Step** in the Academy or let rounds end naturally so episodes don’t run forever.
 - If the agent never explores bombing, try increasing the reward for placing a bomb when an opponent is nearby (e.g. a small bonus in the agent code when `LastPlaceBomb` and an opponent is in range), or train longer.
 - Use the **Heuristic** in the Editor (no model assigned) to verify observations and actions; the agent will behave like the scripted AI.

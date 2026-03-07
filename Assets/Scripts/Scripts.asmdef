@@ -2,9 +2,8 @@
     "name": "Scripts",
     "rootNamespace": "",
     "references": [
-        "UnityEngine",
         "Unity.InputSystem",
-        "Unity.MLAgents"
+        "Unity.ML-Agents"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
