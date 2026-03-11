@@ -132,6 +132,14 @@ namespace Scenes.Arena.Bomb
                     if (hit == null)
                         continue;
 
+                    // Player in explosion cell – apply damage, explosion keeps going
+                    var pc = hit.GetComponent<PlayerController>();
+                    if (pc != null && pc.enabled)
+                    {
+                        pc.TryApplyExplosionDamage();
+                        continue;
+                    }
+
                     // Pushable destructible prefab
                     var destructible = hit.GetComponent<Destructible>();
                     if (destructible != null)
@@ -195,6 +203,16 @@ namespace Scenes.Arena.Bomb
             Explosion explosion = Instantiate(explosionPrefab, position, Quaternion.identity);
             explosion.PlayExplosionSound();
             explosion.DestroyAfter(explosionDuration);
+
+            // Apply damage to any player in the center cell (same overlap as propagation)
+            var centerHits = Physics2D.OverlapBoxAll(position, Vector2.one / 2f, 0f);
+            foreach (var hit in centerHits)
+            {
+                if (hit == null) continue;
+                var pc = hit.GetComponent<PlayerController>();
+                if (pc != null && pc.enabled)
+                    pc.TryApplyExplosionDamage();
+            }
 
             // Defer propagation to next frame to avoid stack overflow when two bombs chain
             StartCoroutine(ExplodeBombPropagateNextFrame(position));

@@ -53,6 +53,17 @@ namespace Scenes.Arena.Player.AI
                 bp.BrainParameters.VectorObservationSize = ObservationSize;
                 bp.BrainParameters.ActionSpec = new ActionSpec(0, new[] { 5, 2, 2 });
             }
+            // Default so the Python trainer can send actions when connected. When no trainer/model, fallback to Heuristic.
+            bp.BehaviorType = BehaviorType.Default;
+
+            // DecisionRequester: Academy steps this agent every step so the trainer gets a timely response (avoids timeout).
+            // DecisionPeriod 1 = request every Academy step so Unity responds quickly to the trainer.
+            if (GetComponent<DecisionRequester>() == null)
+            {
+                var dr = gameObject.AddComponent<DecisionRequester>();
+                dr.DecisionPeriod = 1;
+                dr.TakeActionsBetweenDecisions = true;
+            }
         }
 
         private void OnEnable()
@@ -155,6 +166,8 @@ namespace Scenes.Arena.Player.AI
             sensor.AddObservation(0f);
         }
 
+        private float _lastOnActionLogTime = -999f;
+
         public override void OnActionReceived(ActionBuffers actions)
         {
             var discrete = actions.DiscreteActions;
@@ -176,7 +189,15 @@ namespace Scenes.Arena.Player.AI
 
             // Branch 2: detonate (0=hold = don't detonate, 1=release = detonate)
             LastDetonateHeld = discrete[2] == 0;
+
+            if (Time.time - _lastOnActionLogTime >= 1.5f)
+            {
+                _lastOnActionLogTime = Time.time;
+                Debug.Log($"[BombermanAgent] {gameObject.name} OnActionReceived moveAction={moveAction} LastMove={LastMove}");
+            }
         }
+
+        private float _lastHeuristicLogTime = -999f;
 
         public override void Heuristic(in ActionBuffers actionsOut)
         {
@@ -224,6 +245,13 @@ namespace Scenes.Arena.Player.AI
 
             discrete[1] = 0;
             discrete[2] = 0;
+
+            if (Time.time - _lastHeuristicLogTime >= 1.5f)
+            {
+                _lastHeuristicLogTime = Time.time;
+                Vector2 logMove = discrete[0] switch { 1 => Vector2.up, 2 => Vector2.down, 3 => Vector2.left, 4 => Vector2.right, _ => Vector2.zero };
+                Debug.Log($"[BombermanAgent] {gameObject.name} Heuristic ran → moveAction={discrete[0]} move={logMove}");
+            }
         }
 
         private void FixedUpdate()
@@ -246,7 +274,14 @@ namespace Scenes.Arena.Player.AI
         public void NotifyDeath()
         {
             AddReward(rewardDeath);
-            EndEpisode();
+            try
+            {
+                EndEpisode();
+            }
+            catch (System.NullReferenceException)
+            {
+                // UpdateSensors() can throw when agent is already disabled or sensors not initialized (e.g. death from shrink).
+            }
         }
 
         public void NotifyCollectedItem()

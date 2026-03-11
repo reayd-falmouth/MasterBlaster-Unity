@@ -410,6 +410,7 @@ MonoBehaviour:
   - pointerText: {fileID: 1942726550}
     optionLabel: {fileID: 68809715}
     valueLabel: {fileID: 1448413533}
+  inputActions: {fileID: -944628639613478452, guid: 62380af980098b341b15413f1ebc8cd8, type: 3}
 --- !u!4 &273441096
 Transform:
   m_ObjectHideFlags: 0

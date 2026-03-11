@@ -5,8 +5,10 @@ using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
 using Scenes.Arena.Player.AI;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using Unity.MLAgents;
 using Utilities;
 
 namespace Scenes.Arena
@@ -32,6 +34,14 @@ namespace Scenes.Arena
         [Tooltip("If true, AI players use reinforcement learning (ML-Agents). Requires Behavior Parameters on agent and a trained model for best results. If false, uses scripted AI.")]
         [SerializeField] private bool useReinforcementLearning;
 
+        [Tooltip("Optional: assign the Training Academy GameObject (the one with the ML-Agents Academy component) for reference. Not used for logic; Academy is accessed via Academy.Instance.")]
+        [SerializeField] private GameObject trainingAcademyObject;
+
+        [Header("Input")]
+        [Tooltip("Assign PlayerControls (or UIMenus) here so human players can use gamepad/keyboard. If empty, we try Resources.Load('PlayerControls').")]
+        [SerializeField]
+        private InputActionAsset playerInputActions;
+
         [Header("Assign the 5 players in inspector")]
         public GameObject topLeftPlayer;
         public GameObject topRightPlayer;
@@ -39,8 +49,17 @@ namespace Scenes.Arena
         public GameObject bottomRightPlayer;
         public GameObject middlePlayer;
 
+        /// <summary>Prevents AddWin and transition from running more than once per round (e.g. when multiple deaths trigger CheckWinState).</summary>
+        private bool _roundEndProcessed;
+
         private void Start()
         {
+            _roundEndProcessed = false;
+            float t0 = Time.realtimeSinceStartup;
+            Debug.Log($"[GameManager] Start() began at t={t0:F2}s (Game scene active; Awake/OnEnable already ran)");
+            if (TrainingMode.IsActive)
+                Debug.Log("[GameManager] ML-Agents training: this scene (Game/Train) must be the one that loads when you press Play, or the Python trainer will timeout. Open the Game (or Train) scene, then press Play.");
+
             // Use assigned references so we have all 5 players even when some start inactive (AI needs GetPlayers() to find opponents)
             players = new[]
             {
@@ -53,7 +72,6 @@ namespace Scenes.Arena
             int playerCount = TrainingMode.IsActive ? 2 : PlayerPrefs.GetInt("Players", 2);
 
             // Ensure SessionManager has structure for this game (e.g. first round from menu); do not re-initialize when returning from shop
-            // SessionManager may not exist in the Game scene (e.g. Menu→Countdown→Game or training build); if null, skip so SetupPlayers still runs and only N players show
             if (
                 SessionManager.Instance != null
                 && (
@@ -66,7 +84,8 @@ namespace Scenes.Arena
                 SessionManager.Instance.Initialize(playerCount);
             }
 
-            // In training mode, do not assign devices so every slot is AI (all RL agents)
+            // Controller check is done in Menu; empty slots become AI. When SessionManager is null
+            // (e.g. Game scene opened directly), we skip device assignment so AttachInputProvider gives all slots AI.
             if (!TrainingMode.IsActive && SessionManager.Instance != null)
                 SessionManager.Instance.AssignInputDevices(playerCount);
 
@@ -86,10 +105,19 @@ namespace Scenes.Arena
                 }
             }
 
-            // Load settings
-            shrinkingEnabled = PlayerPrefs.GetInt("Shrinking", 1) == 1;
-            normalLevel = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
-            startMoney = PlayerPrefs.GetInt("StartMoney", 0) == 1;
+            // Load settings; in training mode override so shrinking is off and we use stable arena
+            if (TrainingMode.IsActive)
+            {
+                shrinkingEnabled = false;
+                normalLevel = true;
+                startMoney = false;
+            }
+            else
+            {
+                shrinkingEnabled = PlayerPrefs.GetInt("Shrinking", 1) == 1;
+                normalLevel = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
+                startMoney = PlayerPrefs.GetInt("StartMoney", 0) == 1;
+            }
 
             if (!normalLevel)
                 LoadAlternateLevelSettings();
@@ -101,6 +129,8 @@ namespace Scenes.Arena
                 PlayerPrefs.SetInt("GiveStartMoneyNextArena", 0);
                 PlayerPrefs.Save();
             }
+
+            Debug.Log($"[GameManager] Start() finished at t={Time.realtimeSinceStartup:F2}s (took {Time.realtimeSinceStartup - t0:F2}s)");
         }
 
         void SetupPlayers(int count)
@@ -179,6 +209,11 @@ namespace Scenes.Arena
             if (device.HasValue && movement != null)
             {
                 var human = playerObj.AddComponent<HumanPlayerInput>();
+                var asset = playerInputActions != null ? playerInputActions : Resources.Load<InputActionAsset>("PlayerControls");
+                if (asset != null)
+                    human.inputActions = asset;
+                else
+                    Debug.LogWarning("[GameManager] No Input Action Asset for human player. Assign GameManager's 'Player Input Actions' in the Game scene, or put PlayerControls.inputactions in a Resources folder.");
                 human.Init(
                     device.Value,
                     movement.inputUp,
@@ -191,18 +226,22 @@ namespace Scenes.Arena
             }
             else
             {
-                if (TrainingMode.IsActive || useReinforcementLearning)
+                // In training mode always use RL agents (Academy is created when agents register). Otherwise require Academy.Instance.
+                bool useRL = TrainingMode.IsActive || (useReinforcementLearning && Academy.Instance != null);
+                if (useRL)
                 {
                     var agent = playerObj.AddComponent<BombermanAgent>();
                     var mlBrain = playerObj.AddComponent<MLAgentsBrain>();
                     var aiInput = playerObj.AddComponent<AIPlayerInput>();
                     aiInput.Init(mlBrain);
+                    Debug.Log($"[GameManager] Player {id} → RL (BombermanAgent + MLAgentsBrain)");
                 }
                 else
                 {
                     var brain = playerObj.AddComponent<ScriptedAIBrain>();
                     var aiInput = playerObj.AddComponent<AIPlayerInput>();
                     aiInput.Init(brain);
+                    Debug.Log($"[GameManager] Player {id} → ScriptedAIBrain");
                 }
             }
         }
@@ -210,6 +249,8 @@ namespace Scenes.Arena
         public void CheckWinState()
         {
             if (players == null || players.Length == 0)
+                return;
+            if (_roundEndProcessed)
                 return;
 
             var playerActive = new bool[players.Length];
@@ -248,6 +289,7 @@ namespace Scenes.Arena
             // When exactly one player is left, we always transition to Standings or Overs.
             if (result.LastAliveIndex.HasValue)
             {
+                _roundEndProcessed = true;
                 var lastAlive = players[result.LastAliveIndex.Value];
                 var movement = lastAlive.GetComponent<PlayerController>();
                 if (movement != null)
@@ -288,8 +330,13 @@ namespace Scenes.Arena
                 }
             }
 
+            if (result.Outcome != WinOutcome.NoChange)
+                _roundEndProcessed = true;
+
             if (TrainingMode.IsActive)
                 ReloadGameSceneAfterDelay(1.5f);
+            else if (PlayerPrefs.GetInt("QuickRestart", 0) == 1)
+                ReloadRoundAfterDelay(3f);
             else
                 Invoke(nameof(Standings), 3f);
         }
@@ -304,6 +351,17 @@ namespace Scenes.Arena
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
+        /// <summary>Load Countdown scene to start the next round (skip Standings/Shop). Used when QuickRestart is enabled.</summary>
+        private void ReloadRoundAfterDelay(float delay)
+        {
+            Invoke(nameof(GoToCountdown), delay);
+        }
+
+        private void GoToCountdown()
+        {
+            SceneManager.LoadScene("Countdown");
+        }
+
         private void Standings()
         {
             SyncCoinsToSessionManager();
@@ -315,6 +373,11 @@ namespace Scenes.Arena
         private void EndGame()
         {
             Debug.Log("[GameManager] Timer expired → game over!");
+            if (TrainingMode.IsActive)
+            {
+                ReloadGameSceneAfterDelay(1.5f);
+                return;
+            }
             SyncCoinsToSessionManager();
             SceneFlowManager.I.GoTo(FlowState.Standings);
         }

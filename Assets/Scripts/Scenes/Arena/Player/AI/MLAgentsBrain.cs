@@ -7,16 +7,13 @@ namespace Scenes.Arena.Player.AI
 {
     /// <summary>
     /// Adapts BombermanAgent (ML-Agents) to IAIBrain so AIPlayerInput can use a trained policy.
-    /// RequestDecision() is called each Tick; last action is read from the agent.
+    /// Decisions are driven by the agent's DecisionRequester (Academy step cycle); we only read LastMove here.
     /// </summary>
     [RequireComponent(typeof(BombermanAgent))]
     public class MLAgentsBrain : MonoBehaviour, IAIBrain
     {
-        [Tooltip("Request a new decision every this many seconds (e.g. 0.15).")]
-        public float decisionInterval = 0.15f;
-
         private BombermanAgent _agent;
-        private float _nextDecisionTime;
+        private float _lastLogTime = -999f;
 
         private void Awake()
         {
@@ -40,15 +37,15 @@ namespace Scenes.Arena.Player.AI
                 return;
             }
 
-            if (Time.time >= _nextDecisionTime)
-            {
-                _agent.RequestDecision();
-                _nextDecisionTime = Time.time + decisionInterval;
-            }
-
             move = _agent.LastMove;
             placeBomb = _agent.LastPlaceBomb;
             detonateHeld = _agent.LastDetonateHeld;
+
+            if (Time.time - _lastLogTime >= 2f)
+            {
+                _lastLogTime = Time.time;
+                Debug.Log($"[MLAgentsBrain] {gameObject.name} → LastMove={move} (zero={move.sqrMagnitude < 0.01f})");
+            }
         }
     }
 }

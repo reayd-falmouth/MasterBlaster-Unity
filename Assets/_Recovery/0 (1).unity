@@ -7436,6 +7436,50 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 40d49d8a01b952644af320d415f16e2d, type: 3}
+--- !u!1 &1540338889
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1540338891}
+  - component: {fileID: 1540338890}
+  m_Layer: 0
+  m_Name: TrainingAcademy
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1540338890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1540338889}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92bf7b05b62a74347b08d712625f177b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Scripts::Scenes.Arena.TrainingAcademyHelper
+--- !u!4 &1540338891
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1540338889}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.32076, y: -0.4625, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1594877514
 GameObject:
   m_ObjectHideFlags: 0
@@ -10759,10 +10803,6 @@ PrefabInstance:
       value: 2.5
       objectReference: {fileID: 0}
     - target: {fileID: 839665286745141774, guid: b8e5f104b78c69c42800291ec1896667, type: 3}
-      propertyPath: arenaPitchBase
-      value: 1.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 839665286745141774, guid: b8e5f104b78c69c42800291ec1896667, type: 3}
       propertyPath: arenaPitchStep
       value: 0.02
       objectReference: {fileID: 0}
@@ -10909,6 +10949,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 165573799}
     - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
+      propertyPath: academyObject
+      value: 
+      objectReference: {fileID: 1540338889}
+    - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
       propertyPath: matchDuration
       value: 10
       objectReference: {fileID: 0}
@@ -10946,7 +10990,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8386529144300127410, guid: 61536d5225ecc7248a6d35acd739d608, type: 3}
       propertyPath: useReinforcementLearning
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -10967,3 +11011,4 @@ SceneRoots:
   - {fileID: 1194722994631088529}
   - {fileID: 1352560722142651924}
   - {fileID: 1400702670}
+  - {fileID: 1540338891}

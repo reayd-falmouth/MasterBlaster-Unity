@@ -62,7 +62,7 @@ No manual setup is required for training or inference beyond enabling **Use Rein
    ```bash
    mlagents-learn bomberman_config.yaml --run-id=bomberman_v1
    ```
-4. When prompted, press Play in Unity (or start the built executable). The Python process will connect and train.
+4. When prompted, **open the Game scene (or Train scene) in the Editor, then press Play**. The scene that loads when you press Play **must** be Game or Train (the one with the agents), or the trainer will timeout ("The Unity environment took too long to respond").
 5. Trained artifacts are written to `results/bomberman_v1/`. Use the generated `.onnx` file as the model in the agent’s **Behavior Parameters** (Model) for inference in the game.
 
 ## Example YAML config (save as `bomberman_config.yaml`)
@@ -98,37 +98,56 @@ behaviors:
 
 Adjust `max_steps`, `time_horizon`, and `hyperparameters` as needed. The **Behavior Name** in your Unity **Behavior Parameters** must match the key under `behaviors` (e.g. `Bomberman`).
 
+## Train scene (recommended for training)
+
+A dedicated **Train** scene keeps training logic separate from the main game. When the active scene name **contains** "Train" (e.g. "Train", "Train 1"), `TrainingMode.IsActive` is true automatically (no `-training` flag needed).
+
+### Creating the Train scene
+
+1. In Unity, duplicate the **Game** scene: in the Project window right‑click **Game** → **Duplicate**, then rename the copy to **Train**.
+2. In the **Train** scene, ensure **TrainingAcademyHelper** is present (e.g. on the GameManager GameObject or an empty GameObject). Add it if you only had it in Game.
+3. For training builds, add **Train** to **File → Build Settings** and set it as the **first (index 0)** scene so the executable starts in the Train scene.
+
+When you open the **Train** scene and press Play (or run a build that starts with Train), the game runs in training mode: 2 RL agents, no device assignment, and the scene reloads on round end. You can still use **Game** with the `-training` flag if you prefer.
+
 ## Autonomous training (no human play)
 
 To train rapidly without playing manually, use **training mode**: all players are RL agents, and the arena reloads automatically when a round ends so episodes repeat.
 
-### 1. Training mode flag
+### 1. Training mode
 
-Run the game (Editor or build) with the **`-training`** command-line argument. When `-training` is present, `TrainingMode.IsActive` is true: the Game scene uses a fixed 2 players, assigns no devices (all slots are AI), and every player gets `BombermanAgent` + `MLAgentsBrain`. When a round ends, the scene reloads instead of going to Standings.
+Training mode is active when either:
 
-### 2. Game scene setup
+- The active scene is **Train** (see above), or  
+- The game is run with the **`-training`** command-line argument (e.g. when using the Game scene as the first scene).
 
-In the **Game** scene, add the **TrainingAcademyHelper** component (e.g. on the GameManager GameObject or an empty GameObject). When in training mode it subscribes to the ML-Agents Academy `OnEnvironmentReset`; on reset (e.g. after max steps) it reloads the Game scene. The Academy is auto-initialized by ML-Agents when agents run. Optionally add an **Academy** component in the Editor to configure **Max Step** (e.g. 2000–5000).
+When active, the scene uses a fixed 2 players, assigns no devices (all slots are AI). If an **Academy** is in the scene (e.g. for ML-Agents training), players use `BombermanAgent` + `MLAgentsBrain`; otherwise they use scripted AI so they still move and place bombs. When a round ends (or the timer/shrink triggers), the scene reloads instead of going to Standings or Shop.
+
+### 2. Scene setup
+
+In the scene you use for training (**Train** or **Game**), add the **TrainingAcademyHelper** component (e.g. on the GameManager GameObject or an empty GameObject). When in training mode it subscribes to the ML-Agents Academy `OnEnvironmentReset`; on reset (e.g. after max steps) it reloads the current scene. The Academy is auto-initialized by ML-Agents when agents run. Optionally add an **Academy** component in the Editor to configure **Max Step** (e.g. 2000–5000).
 
 ### 3. Training build and entry
 
-For the **training** build, set the **Game** scene as the **first (index 0)** scene in **File → Build Settings** so the executable starts directly in the arena. Use **Server Build** for headless runs (no rendering, faster; suitable for multiple instances).
+For the **training** build, set **Train** (or **Game**) as the **first (index 0)** scene in **File → Build Settings** so the executable starts directly in the arena. Use **Server Build** for headless runs (no rendering, faster; suitable for multiple instances).
 
 ### 4. Run autonomous training
 
 1. Start the Python trainer: `mlagents-learn bomberman_config.yaml --run-id=bomberman_v1`
-2. Run the training build with `-training`, e.g. `MasterBlaster.exe -training` (or `./MasterBlaster -training` on macOS/Linux).
+2. Run the training build:
+   - If the first scene is **Train**: run the exe with no arguments (e.g. `MasterBlaster.exe`).
+   - If the first scene is **Game**: run with `-training` (e.g. `MasterBlaster.exe -training`).
 3. When the trainer prompts, press Play (or the build connects automatically). Episodes run autonomously: two RL agents play, the round ends, the scene reloads, and the next episode starts. No human input required.
 
-For **multiple parallel environments**, build headless, run multiple instances of the executable each with `-training` (use different `--worker-id` / `--base-port` per process if required by your ML-Agents version). The trainer connects to all and aggregates experience.
+For **multiple parallel environments**, build headless, run multiple instances of the executable (with **Train** as first scene, or with `-training` if using Game). Use different `--worker-id` / `--base-port` per process if required by your ML-Agents version. The trainer connects to all and aggregates experience.
 
 ### 5. Summary
 
 | Step | Action |
 |------|--------|
-| Scene | Game = first scene in Build Settings; add TrainingAcademyHelper in Game scene. |
-| Build | Optional: Server Build for headless. |
-| Run | `YourGame.exe -training` (or multiple instances). |
+| Scene | **Train**: duplicate Game, save as Train; add TrainingAcademyHelper. Or use **Game** with `-training`. |
+| Build | Train (or Game) = first scene; optional Server Build for headless. |
+| Run | `YourGame.exe` (Train as first scene) or `YourGame.exe -training` (Game as first scene). |
 | Train | `mlagents-learn bomberman_config.yaml --run-id=bomberman_v1` then connect. |
 
 ## Tips

@@ -92,6 +92,10 @@ namespace Scenes.Arena.Player
             if (visualState == PlayerVisualState.Remote)
                 return;
 
+            // Lazy-resolve input provider in case it was added after Start (e.g. execution order)
+            if (_inputProvider == null)
+                _inputProvider = GetComponent<IPlayerInput>();
+
             Vector2 move = _inputProvider != null ? _inputProvider.GetMoveDirection() : GetLegacyMove();
             if (move.sqrMagnitude > 0.01f)
             {
@@ -143,22 +147,24 @@ namespace Scenes.Arena.Player
             UpdateVisualState();
         }
 
+        /// <summary>Apply explosion damage: run OnExplosionHit handlers; if none block, run death. Call from trigger or from BombController.</summary>
+        public void TryApplyExplosionDamage()
+        {
+            if (OnExplosionHit != null)
+            {
+                foreach (System.Func<bool> handler in OnExplosionHit.GetInvocationList())
+                {
+                    if (handler())
+                        return; // blocked by ability
+                }
+            }
+            DeathSequence();
+        }
+
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (other.gameObject.layer == LayerMask.NameToLayer("Explosion"))
-            {
-                // If any subscriber returns true, we cancel death
-                if (OnExplosionHit != null)
-                {
-                    foreach (System.Func<bool> handler in OnExplosionHit.GetInvocationList())
-                    {
-                        if (handler())
-                            return; // blocked by ability
-                    }
-                }
-
-                DeathSequence();
-            }
+                TryApplyExplosionDamage();
         }
 
         private void DeathSequence()

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Scenes.Shop;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Utilities;
 
 namespace Core
@@ -24,7 +25,7 @@ namespace Core
         /// <summary>Session-only: display name of match winner. Set when transitioning to Overs, cleared on new game.</summary>
         public string MatchWinnerName;
 
-        /// <summary>Player ID -> device index (0 = keyboard, 1+ = joystick). Missing or -1 means AI.</summary>
+        /// <summary>Player ID -> device index (1+ = gamepad only). Missing or -1 means AI.</summary>
         private Dictionary<int, int> _playerDeviceIndex = new Dictionary<int, int>();
 
         // 3. Setup/Cleanup Method
@@ -120,15 +121,17 @@ namespace Core
             return string.IsNullOrEmpty(MatchWinnerName) ? "Unknown" : MatchWinnerName;
         }
 
-        /// <summary>Assign input devices to players: device 0 = keyboard, 1+ = joysticks. Slots without a device get AI. Call after Initialize(playerCount).</summary>
+        /// <summary>Assign input devices to players. Only controllers (gamepads) are allowed; keyboard is not assigned.
+        /// Device 1 = first gamepad, 2 = second, etc. Slots without a controller get AI. Call after Initialize(playerCount).</summary>
         public void AssignInputDevices(int playerCount)
         {
             _playerDeviceIndex.Clear();
-            int deviceCount = 1 + GetConnectedJoystickCount();
-            int nextDevice = 0;
+            int joystickCount = GetConnectedJoystickCount();
+            int nextDevice = 1;
+
             for (int id = 1; id <= playerCount; id++)
             {
-                if (nextDevice < deviceCount)
+                if (nextDevice <= joystickCount)
                 {
                     _playerDeviceIndex[id] = nextDevice;
                     nextDevice++;
@@ -140,18 +143,19 @@ namespace Core
             }
         }
 
+        /// <summary>Uses the new Input System's Gamepad list so one physical controller is counted once (legacy GetJoystickNames can over-report).</summary>
         private static int GetConnectedJoystickCount()
         {
-            int count = 0;
-            foreach (string name in Input.GetJoystickNames())
-            {
-                if (!string.IsNullOrEmpty(name))
-                    count++;
-            }
-            return count;
+            return Gamepad.all.Count;
         }
 
-        /// <summary>Returns assigned device index for the player (0 = keyboard, 1+ = joystick), or null if this player is AI.</summary>
+        /// <summary>Number of connected gamepads/controllers. Use to require at least one before playing.</summary>
+        public static int GetConnectedControllerCount()
+        {
+            return GetConnectedJoystickCount();
+        }
+
+        /// <summary>Returns assigned device index for the player (1+ = gamepad; keyboard not used), or null if this player is AI.</summary>
         public int? GetAssignedDevice(int playerId)
         {
             if (!_playerDeviceIndex.TryGetValue(playerId, out int index) || index < 0)

@@ -1,8 +1,10 @@
 using System.Collections;
 using Core;
+using Scenes.Arena;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 // AudioController
@@ -31,9 +33,9 @@ namespace Scenes.Arena.Map
         [SerializeField]
         private float alarmThresholdFraction = 0.10f;
 
-        [Tooltip("When remaining time <= this fraction, shrinking starts (e.g. 0.05 = last 5%).")]
+        [Tooltip("When remaining time <= this fraction, shrinking starts (e.g. 0.15 = last 15%).")]
         [SerializeField]
-        private float shrinkThresholdFraction = 0.05f;
+        private float shrinkThresholdFraction = 0.15f;
 
         [Tooltip("Start timer automatically on Start().")]
         [SerializeField]
@@ -103,6 +105,7 @@ namespace Scenes.Arena.Map
         private float timeRemaining;
         private bool alarmActive;
         private bool shrinkingStarted;
+        private bool shrinkingComplete;
         private bool timerRunning;
         private bool endingTriggered;
         private Color originalBg;
@@ -116,8 +119,10 @@ namespace Scenes.Arena.Map
 
         void Awake()
         {
-            // pull PlayerPref if present (keeps parity with your old GameManager setting)
-            if (PlayerPrefs.HasKey("Shrinking"))
+            // In training mode use overrides; otherwise pull from PlayerPrefs
+            if (TrainingMode.IsActive)
+                shrinkingEnabled = false;
+            else if (PlayerPrefs.HasKey("Shrinking"))
                 shrinkingEnabled = PlayerPrefs.GetInt("Shrinking", 1) == 1;
 
             if (!targetCamera)
@@ -195,10 +200,18 @@ namespace Scenes.Arena.Map
                 if (!shrinkingStarted && timeRemaining <= shrinkTime)
                 {
                     shrinkingStarted = true;
+                    shrinkingComplete = false;
                     StartCoroutine(ShrinkRoutine());
                 }
 
                 yield return null;
+            }
+
+            // When shrinking has started, wait for it to reach the center before ending the round
+            if (shrinkingStarted && !shrinkingComplete)
+            {
+                while (!shrinkingComplete)
+                    yield return null;
             }
 
             // timer expired
@@ -209,8 +222,10 @@ namespace Scenes.Arena.Map
             if (!endingTriggered)
             {
                 endingTriggered = true;
-                // End the game on timeout
-                SceneFlowManager.I.GoTo(FlowState.Standings);
+                if (TrainingMode.IsActive)
+                    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                else
+                    SceneFlowManager.I.GoTo(FlowState.Standings);
             }
         }
 
@@ -328,6 +343,8 @@ namespace Scenes.Arena.Map
                 }
                 left++;
             }
+
+            shrinkingComplete = true;
         }
 
         private void PlaceBlock(Vector3Int cell)

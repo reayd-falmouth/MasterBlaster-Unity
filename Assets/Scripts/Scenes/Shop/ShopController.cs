@@ -1,5 +1,6 @@
 using Core;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace Scenes.Shop
@@ -18,6 +19,15 @@ namespace Scenes.Shop
         }
 
         public ShopItem[] items;
+
+        [Header("Input")]
+        [Tooltip("Assign UIMenus or PlayerControls so the current player can navigate with gamepad. If unset, keyboard only.")]
+        [SerializeField]
+        private InputActionAsset inputActions;
+
+        private InputAction _moveAction;
+        private InputAction _submitAction;
+        private Vector2 _lastMoveInput;
 
         private int selectedIndex = 0;
         private int playerCount;
@@ -47,8 +57,30 @@ namespace Scenes.Shop
 
         private void Awake()
         {
+            var asset = inputActions != null ? inputActions : Resources.Load<InputActionAsset>("PlayerControls");
+            if (asset != null)
+            {
+                var map = asset.FindActionMap("Player");
+                if (map != null)
+                {
+                    _moveAction = map.FindAction("Move");
+                    _submitAction = map.FindAction("PlaceBomb");
+                }
+            }
             if (items != null && items.Length > 0)
                 UpdatePointers();
+        }
+
+        private void OnEnable()
+        {
+            _moveAction?.Enable();
+            _submitAction?.Enable();
+        }
+
+        private void OnDisable()
+        {
+            _moveAction?.Disable();
+            _submitAction?.Disable();
         }
 
         private void Start()
@@ -76,18 +108,34 @@ namespace Scenes.Shop
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.UpArrow))
+            bool up, down, submit;
+            if (_moveAction != null && _submitAction != null)
+            {
+                Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+                up = Input.GetKeyDown(KeyCode.UpArrow) || (moveInput.y > 0.5f && _lastMoveInput.y <= 0.5f);
+                down = Input.GetKeyDown(KeyCode.DownArrow) || (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f);
+                submit = Input.GetKeyDown(KeyCode.Return) || _submitAction.WasPressedThisFrame();
+                _lastMoveInput = moveInput;
+            }
+            else
+            {
+                up = Input.GetKeyDown(KeyCode.UpArrow);
+                down = Input.GetKeyDown(KeyCode.DownArrow);
+                submit = Input.GetKeyDown(KeyCode.Return);
+            }
+
+            if (up)
             {
                 selectedIndex = (selectedIndex - 1 + items.Length) % items.Length;
                 UpdatePointers();
             }
-            if (Input.GetKeyDown(KeyCode.DownArrow))
+            if (down)
             {
                 selectedIndex = (selectedIndex + 1) % items.Length;
                 UpdatePointers();
             }
 
-            if (Input.GetKeyDown(KeyCode.Return))
+            if (submit)
             {
                 AttemptPurchase(selectedIndex);
                 RefreshCoinsDisplay();

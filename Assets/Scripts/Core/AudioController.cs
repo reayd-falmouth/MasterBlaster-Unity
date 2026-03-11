@@ -140,6 +140,9 @@ namespace Core
         [SerializeField, Range(1f, 2.5f)]
         private float arenaPitchMax = 2f;
 
+        /// <summary>Minimum base pitch for arena music so returning to the arena never sounds pitched down (e.g. when a scene overrides arenaPitchBase to 1.0).</summary>
+        private const float ArenaPitchBaseMinimum = 1.25f;
+
         private int lastTrackIndex = -1; // -1 means "no track has been played yet"
         private int arenaMusicPlayCount;
         private float arenaPitchBaseSnapshot = -1f; // actual pitch on first play (from prefab/source), set once
@@ -152,6 +155,23 @@ namespace Core
             // EnsureSource(ref ambienceSource, "Ambience", loop: true, output: musicMixerGroup);
             EnsureSource(ref sfxSource, "SFX", loop: false, output: soundFxMixerGroup);
             EnsureSource(ref alarmSource, "Alarm", loop: true, output: soundFxMixerGroup);
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name == "Game")
+            {
+                arenaMusicPlayCount = 0;
+                arenaPitchBaseSnapshot = -1f;
+                if (musicSource != null)
+                    musicSource.pitch = arenaPitchBase;
+            }
         }
 
         private void Update()
@@ -219,14 +239,17 @@ namespace Core
 
             arenaMusicPlayCount++;
             if (arenaMusicPlayCount == 1)
-                arenaPitchBaseSnapshot = musicSource.pitch;
+            {
+                arenaPitchBaseSnapshot = Mathf.Max(arenaPitchBase, ArenaPitchBaseMinimum);
+            }
             if (arenaPitchBaseSnapshot < 0f)
-                arenaPitchBaseSnapshot = arenaPitchBase;
+                arenaPitchBaseSnapshot = Mathf.Max(arenaPitchBase, ArenaPitchBaseMinimum);
 
             int completedCycles = arenaMusicPlayCount / 4;
             float pitch = arenaPitchBaseSnapshot + completedCycles * arenaPitchStep;
             musicSource.pitch = Mathf.Min(pitch, arenaPitchMax);
 
+            Debug.Log($"[ArenaMusic] playCount={arenaMusicPlayCount} snapshot={arenaPitchBaseSnapshot:F2} cycles={completedCycles} pitch={musicSource.pitch:F2} (scene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name})");
             PlayMusic(arenaMusic, true);
         }
 

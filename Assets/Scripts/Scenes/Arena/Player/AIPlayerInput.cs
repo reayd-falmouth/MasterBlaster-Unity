@@ -15,6 +15,7 @@ namespace Scenes.Arena.Player
         private Vector2 _lastMove;
         private bool _pendingBombDown;
         private bool _detonateHeld = true;
+        private float _lastLogTime = -999f;
 
         public void Init(IAIBrain brain)
         {
@@ -42,6 +43,12 @@ namespace Scenes.Arena.Player
             if (placeBomb)
                 _pendingBombDown = true;
             _detonateHeld = detonateHeld;
+
+            if (Time.time - _lastLogTime >= 1.5f)
+            {
+                _lastLogTime = Time.time;
+                Debug.Log($"[AIPlayerInput] {gameObject.name} move={move} (zero={move.sqrMagnitude < 0.01f})");
+            }
         }
 
         public Vector2 GetMoveDirection()

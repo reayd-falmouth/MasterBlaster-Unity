@@ -3342,6 +3342,7 @@ MonoBehaviour:
     pointerText: {fileID: 1366121959}
     labelText: {fileID: 1244967854}
     costText: {fileID: 0}
+  inputActions: {fileID: -944628639613478452, guid: 62380af980098b341b15413f1ebc8cd8, type: 3}
   coinContainer: {fileID: 635918876}
   coinSprite: {fileID: -272534319, guid: 3a2bebeece517634e83385c8ed26f632, type: 3}
   headingText: {fileID: 1412362176}
