@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Scenes.Arena;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Map;
 using UnityEngine;
@@ -11,6 +12,9 @@ namespace Scenes.Arena.Player.AI
     /// </summary>
     public class ScriptedAIBrain : MonoBehaviour, IAIBrain
     {
+        // Fix 1: static array replaces the local new[] allocation in FindSafestDirection
+        private static readonly Vector2[] Dirs4 = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
+
         [Header("Tuning")]
         [Tooltip("How often to re-decide (seconds)")]
         public float tickInterval = 0.15f;
@@ -20,6 +24,18 @@ namespace Scenes.Arena.Player.AI
         public float chaseRange = 8f;
 
         private float _nextTick;
+        private Transform _arenaRoot;
+        private GameManager _localGameManager;
+
+        private void Awake()
+        {
+            _arenaRoot = transform.root != transform ? transform.root : null;
+            _localGameManager = (_arenaRoot != null ? _arenaRoot.GetComponentInChildren<GameManager>() : null)
+                                ?? GameManager.Instance;
+        }
+
+        private IReadOnlyList<BombInfo>   GetArenaBombs()  => _localGameManager != null ? _localGameManager.ArenaBombs  : (IReadOnlyList<BombInfo>)   Object.FindObjectsByType<BombInfo>(FindObjectsSortMode.None);
+        private IReadOnlyList<ItemPickup> GetArenaItems()  => _localGameManager != null ? _localGameManager.ArenaItems   : (IReadOnlyList<ItemPickup>) Object.FindObjectsByType<ItemPickup>(FindObjectsSortMode.None);
 
         public void Tick(
             Transform self,
@@ -120,7 +136,7 @@ namespace Scenes.Arena.Player.AI
 
         private bool IsCellInDanger(Vector2 cell)
         {
-            var bombs = Object.FindObjectsByType<BombInfo>(FindObjectsSortMode.None);
+            var bombs = GetArenaBombs();
             foreach (var b in bombs)
             {
                 if (b == null) continue;
@@ -137,11 +153,10 @@ namespace Scenes.Arena.Player.AI
 
         private Vector2 FindSafestDirection(Vector2 myPos, Vector2 myCell, Tilemap destructibleTiles)
         {
-            Vector2[] dirs = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
             Vector2 best = Vector2.zero;
             int bestDanger = int.MaxValue;
 
-            foreach (Vector2 d in dirs)
+            foreach (Vector2 d in Dirs4)
             {
                 Vector2 nextCell = myCell + d;
                 if (!IsWalkable(nextCell, destructibleTiles))
@@ -159,7 +174,7 @@ namespace Scenes.Arena.Player.AI
         private int CountDangerCells(Vector2 cell)
         {
             int count = 0;
-            var bombs = Object.FindObjectsByType<BombInfo>(FindObjectsSortMode.None);
+            var bombs = GetArenaBombs();
             foreach (var b in bombs)
             {
                 if (b == null) continue;
@@ -204,7 +219,7 @@ namespace Scenes.Arena.Player.AI
 
         private ItemPickup GetNearestItem(Vector2 myPos)
         {
-            var items = Object.FindObjectsByType<ItemPickup>(FindObjectsSortMode.None);
+            var items = GetArenaItems();
             ItemPickup nearest = null;
             float best = 16f * 16f;
             foreach (var item in items)

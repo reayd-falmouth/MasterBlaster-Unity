@@ -4,13 +4,19 @@ using Scenes.Arena.Bomb;
 using Scenes.Arena.Map;
 using Scenes.Arena.Player.Abilities;
 using Scenes.Shop;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Scenes.Arena.Player
 {
     [RequireComponent(typeof(Rigidbody2D))]
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : NetworkBehaviour
     {
+        // NetworkVariables so clients can animate from server-authoritative direction.
+        private NetworkVariable<Vector2> _netDirection = new NetworkVariable<Vector2>(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<bool> _netStop = new NetworkVariable<bool>(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         public event System.Func<bool> OnExplosionHit;
         public Vector2 Direction => direction;
 
@@ -35,6 +41,7 @@ namespace Scenes.Arena.Player
 
         private RemoteBombController pushingBomb;
         private IPlayerInput _inputProvider;
+        private GameManager _localGameManager;
 
         [Header("Input")]
         public KeyCode inputUp = KeyCode.W;
@@ -70,6 +77,12 @@ namespace Scenes.Arena.Player
             audioSource.playOnAwake = false;
             if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
                 audioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
+
+            // Prefer a GameManager in the same arena hierarchy; fall back to the global Instance
+            // for single-arena scenes where the player is a root-level GameObject.
+            var root = transform.root != transform ? transform.root : null;
+            _localGameManager = (root != null ? root.GetComponentInChildren<GameManager>() : null)
+                                ?? GameManager.Instance;
         }
 
         private void Start()
@@ -83,8 +96,14 @@ namespace Scenes.Arena.Player
             }
 
             _inputProvider = GetComponent<IPlayerInput>();
+            Debug.Log($"[PlayerController] {gameObject.name} Start: inputProvider={_inputProvider?.GetType().Name ?? "NULL"}");
             ApplyUpgrades();
         }
+
+        // Fix 2: gate hot-path Debug.Log behind this flag (default off for training)
+        [SerializeField] private bool verboseLogging = false;
+
+        private float _lastPCLogTime = -999f;
 
         private void Update()
         {
@@ -92,11 +111,19 @@ namespace Scenes.Arena.Player
             if (visualState == PlayerVisualState.Remote)
                 return;
 
-            // Lazy-resolve input provider in case it was added after Start (e.g. execution order)
-            if (_inputProvider == null)
+            // Lazy-resolve: also re-resolve if the interface reference points to a destroyed Unity component.
+            // (C# null check alone misses destroyed MonoBehaviours held via an interface reference.)
+            if (_inputProvider == null || (_inputProvider is UnityEngine.Object uo && uo == null))
                 _inputProvider = GetComponent<IPlayerInput>();
 
             Vector2 move = _inputProvider != null ? _inputProvider.GetMoveDirection() : GetLegacyMove();
+
+            if (verboseLogging && Time.time - _lastPCLogTime >= 2f)
+            {
+                _lastPCLogTime = Time.time;
+                Debug.Log($"[PlayerController] {gameObject.name} Update: provider={_inputProvider?.GetType().Name ?? "NULL"} move={move} stop={stop} enabled={enabled}");
+            }
+
             if (move.sqrMagnitude > 0.01f)
             {
                 if (Mathf.Abs(move.x) >= Mathf.Abs(move.y))
@@ -131,8 +158,19 @@ namespace Scenes.Arena.Player
 
         private void FixedUpdate()
         {
-            Vector2 position = rb.position;
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
+            if (isOnline)
+            {
+                // Clients animate from the replicated direction; only host moves the rigidbody.
+                if (!IsServer) return;
+
+                // Push state to clients via NetworkVariables.
+                _netDirection.Value = direction;
+                _netStop.Value = stop;
+            }
+
+            Vector2 position = rb.position;
             if (!stop)
             {
                 Vector2 translation = speed * Time.fixedDeltaTime * direction;
@@ -174,8 +212,33 @@ namespace Scenes.Arena.Player
 
             var rlAgent = GetComponent<Scenes.Arena.Player.AI.BombermanAgent>();
             if (rlAgent != null)
+            {
+                if (TrainingMode.IsActive)
+                {
+                    // Skip the 1.25s animation entirely: EndEpisode() calls OnEpisodeBegin()
+                    // synchronously, which resets the arena before DeathSequence() can overwrite it.
+                    rlAgent.NotifyDeath();
+                    return;
+                }
                 rlAgent.NotifyDeath();
+            }
 
+            // Broadcast death animation to all clients when online.
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && IsServer)
+                PlayDeathClientRpc(playerId);
+            else
+                PlayDeathLocally();
+        }
+
+        [ClientRpc]
+        private void PlayDeathClientRpc(int pid)
+        {
+            PlayDeathLocally();
+        }
+
+        private void PlayDeathLocally()
+        {
             visualState = PlayerVisualState.Death;
             UpdateVisualState();
 
@@ -191,7 +254,19 @@ namespace Scenes.Arena.Player
         private void OnDeathSequenceEnded()
         {
             gameObject.SetActive(false);
-            GameManager.Instance.CheckWinState();
+            _localGameManager?.CheckWinState();
+        }
+
+        /// <summary>
+        /// Called by GameManager to reset this player for a new training episode.
+        /// Cancels any in-flight death sequence, restores visual state, and re-enables components.
+        /// </summary>
+        public void ResetForEpisode()
+        {
+            CancelInvoke(nameof(OnDeathSequenceEnded));
+            stop = false;
+            visualState = PlayerVisualState.Normal;
+            UpdateVisualState();
         }
 
         // public void ApplyUpgrades()

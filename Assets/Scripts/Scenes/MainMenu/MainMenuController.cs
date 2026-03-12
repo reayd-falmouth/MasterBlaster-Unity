@@ -1,4 +1,5 @@
 using Core;
+using Online;
 using Scenes.Shop;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -109,8 +110,22 @@ namespace Scenes.MainMenu
             _lastMoveInput = moveInput;
         }
 
+        [Header("Online")]
+        [Tooltip("Assign the OnlineLobbyUI panel GameObject. When Online is selected, this panel activates instead of starting locally.")]
+        [SerializeField] private GameObject onlineLobbyPanel;
+
+        private bool _onlineSelected;
+
         private void HandleSubmit()
         {
+            if (_onlineSelected)
+            {
+                // Show the online lobby panel; NetworkLobbyManager handles the rest.
+                if (onlineLobbyPanel != null)
+                    onlineLobbyPanel.SetActive(true);
+                return;
+            }
+
             if (SessionManager.GetConnectedControllerCount() == 0)
             {
                 Debug.LogWarning("Connect at least one controller to play.");

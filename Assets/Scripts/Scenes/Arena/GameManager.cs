@@ -1,22 +1,30 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using Core;
+using Online;
 using Scenes.Arena.Bomb;
+using Scenes.Arena.Map;
 using Scenes.Arena.Player;
 using Scenes.Arena.Player.AI;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 using Unity.MLAgents;
-using Utilities;
+using Unity.MLAgents.Policies;
 
 namespace Scenes.Arena
 {
     [DefaultExecutionOrder(-1)]
-    public class GameManager : Singleton<GameManager>
+    public class GameManager : NetworkBehaviour
     {
-        // public static GameManager Instance { get; private set; }
+        /// <summary>
+        /// Convenience accessor for single-arena scenes. In multi-arena training each arena has its own
+        /// GameManager — use local references (cached via transform.root) instead of this property there.
+        /// </summary>
+        public static GameManager Instance { get; private set; }
 
         [SerializeField]
         private GameObject[] players;
@@ -33,6 +41,9 @@ namespace Scenes.Arena
         [Header("AI")]
         [Tooltip("If true, AI players use reinforcement learning (ML-Agents). Requires Behavior Parameters on agent and a trained model for best results. If false, uses scripted AI.")]
         [SerializeField] private bool useReinforcementLearning;
+
+        [Tooltip("When true, RL agents use Heuristic so they move without the Python trainer. When false, use Default so the trainer sends actions (for training); ensure Game scene loads when you press Play.")]
+        [SerializeField] private bool useHeuristicOnlyForAgents = true;
 
         [Tooltip("Optional: assign the Training Academy GameObject (the one with the ML-Agents Academy component) for reference. Not used for logic; Academy is accessed via Academy.Instance.")]
         [SerializeField] private GameObject trainingAcademyObject;
@@ -51,6 +62,48 @@ namespace Scenes.Arena
 
         /// <summary>Prevents AddWin and transition from running more than once per round (e.g. when multiple deaths trigger CheckWinState).</summary>
         private bool _roundEndProcessed;
+
+        // ── Online multiplayer ───────────────────────────────────────────────────────
+        /// <summary>Maps NGO client IDs → arena player IDs. Host-only.</summary>
+        private readonly Dictionary<ulong, int> _clientToPlayerId = new Dictionary<ulong, int>();
+
+        // ── Training episode reset ───────────────────────────────────────────────────
+        // Captured once in Start() so ResetArenaForTraining() can restore the arena
+        // to its initial state without reloading the scene.
+        private Tilemap _destructibleTilemap;
+        private readonly Dictionary<Vector3Int, TileBase> _initialDestructibleTiles = new Dictionary<Vector3Int, TileBase>();
+        private readonly Dictionary<GameObject, Vector3> _initialPlayerLocalPositions = new Dictionary<GameObject, Vector3>();
+
+        // ── Arena object registries ──────────────────────────────────────────────────
+        // BombInfo, Explosion, and ItemPickup self-register here so agents can do an
+        // O(1) list read instead of a scene-wide FindObjectsByType scan every step.
+        private readonly List<BombInfo>   _arenaBombs      = new List<BombInfo>();
+        private readonly List<Explosion>  _arenaExplosions  = new List<Explosion>();
+        private readonly List<ItemPickup> _arenaItems       = new List<ItemPickup>();
+
+        public IReadOnlyList<BombInfo>   ArenaBombs      => _arenaBombs;
+        public IReadOnlyList<Explosion>  ArenaExplosions  => _arenaExplosions;
+        public IReadOnlyList<ItemPickup> ArenaItems       => _arenaItems;
+
+        public void RegisterBomb(BombInfo b)         { if (b != null && !_arenaBombs.Contains(b))       _arenaBombs.Add(b); }
+        public void UnregisterBomb(BombInfo b)       => _arenaBombs.Remove(b);
+        public void RegisterExplosion(Explosion e)   { if (e != null && !_arenaExplosions.Contains(e))  _arenaExplosions.Add(e); }
+        public void UnregisterExplosion(Explosion e) => _arenaExplosions.Remove(e);
+        public void RegisterItem(ItemPickup item)    { if (item != null && !_arenaItems.Contains(item)) _arenaItems.Add(item); }
+        public void UnregisterItem(ItemPickup item)  => _arenaItems.Remove(item);
+
+        private void Awake()
+        {
+            // Soft singleton: first arena wins. Multi-arena training scenes use local references instead.
+            if (Instance == null)
+                Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
 
         private void Start()
         {
@@ -129,6 +182,9 @@ namespace Scenes.Arena
                 PlayerPrefs.SetInt("GiveStartMoneyNextArena", 0);
                 PlayerPrefs.Save();
             }
+
+            if (TrainingMode.IsActive)
+                CaptureInitialArenaState();
 
             Debug.Log($"[GameManager] Start() finished at t={Time.realtimeSinceStartup:F2}s (took {Time.realtimeSinceStartup - t0:F2}s)");
         }
@@ -234,7 +290,8 @@ namespace Scenes.Arena
                     var mlBrain = playerObj.AddComponent<MLAgentsBrain>();
                     var aiInput = playerObj.AddComponent<AIPlayerInput>();
                     aiInput.Init(mlBrain);
-                    Debug.Log($"[GameManager] Player {id} → RL (BombermanAgent + MLAgentsBrain)");
+                    // BehaviorType is set by BombermanAgent.EnsureBehaviorParameters() based on TrainingMode.IsActive.
+                    Debug.Log($"[GameManager] Player {id} → RL (BombermanAgent + MLAgentsBrain), TrainingMode={TrainingMode.IsActive}");
                 }
                 else
                 {
@@ -248,6 +305,10 @@ namespace Scenes.Arena
 
         public void CheckWinState()
         {
+            // In online play, only the host drives win-state and scene transitions.
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !IsServer)
+                return;
+
             if (players == null || players.Length == 0)
                 return;
             if (_roundEndProcessed)
@@ -316,15 +377,14 @@ namespace Scenes.Arena
                             var winnerAgent = lastAlive.GetComponent<BombermanAgent>();
                             if (winnerAgent != null)
                                 winnerAgent.AddReward(0.5f);
-                            ReloadGameSceneAfterDelay(1.5f);
-                            return;
+                            return;   // scene reload handled by Academy / TrainingAcademyHelper
                         }
                         if (SessionManager.Instance != null)
                             SessionManager.Instance.SetMatchWinner(
                                 movement.playerId,
                                 lastAlive.name
                             );
-                        SceneFlowManager.I.GoToOvers();
+                        GoToOversClientRpc();
                         return;
                     }
                 }
@@ -334,7 +394,7 @@ namespace Scenes.Arena
                 _roundEndProcessed = true;
 
             if (TrainingMode.IsActive)
-                ReloadGameSceneAfterDelay(1.5f);
+                return;   // scene reload handled by Academy / TrainingAcademyHelper
             else if (PlayerPrefs.GetInt("QuickRestart", 0) == 1)
                 ReloadRoundAfterDelay(3f);
             else
@@ -344,6 +404,75 @@ namespace Scenes.Arena
         private void ReloadGameSceneAfterDelay(float delay)
         {
             Invoke(nameof(ReloadGameScene), delay);
+        }
+
+        private void CaptureInitialArenaState()
+        {
+            // Save spawn positions for all initially-active players.
+            _initialPlayerLocalPositions.Clear();
+            foreach (var p in players)
+                if (p != null && p.activeInHierarchy)
+                    _initialPlayerLocalPositions[p] = p.transform.localPosition;
+
+            // Save every tile in the destructible tilemap.
+            var bc = topLeftPlayer != null ? topLeftPlayer.GetComponent<BombController>() : null;
+            if (bc != null && bc.destructibleTiles != null)
+            {
+                _destructibleTilemap = bc.destructibleTiles;
+                _initialDestructibleTiles.Clear();
+                foreach (var pos in _destructibleTilemap.cellBounds.allPositionsWithin)
+                {
+                    var tile = _destructibleTilemap.GetTile(pos);
+                    if (tile != null) _initialDestructibleTiles[pos] = tile;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Resets this arena for a new training episode without reloading the scene.
+        /// Called from BombermanAgent.OnEpisodeBegin().
+        /// </summary>
+        public void ResetArenaForTraining()
+        {
+            _roundEndProcessed = false;
+
+            // Destroy all live bombs, explosions, and items.
+            for (int i = _arenaBombs.Count - 1; i >= 0; i--)
+                if (_arenaBombs[i] != null) Destroy(_arenaBombs[i].gameObject);
+            _arenaBombs.Clear();
+
+            for (int i = _arenaExplosions.Count - 1; i >= 0; i--)
+                if (_arenaExplosions[i] != null) Destroy(_arenaExplosions[i].gameObject);
+            _arenaExplosions.Clear();
+
+            for (int i = _arenaItems.Count - 1; i >= 0; i--)
+                if (_arenaItems[i] != null) Destroy(_arenaItems[i].gameObject);
+            _arenaItems.Clear();
+
+            // Restore the destructible tilemap to its initial layout.
+            if (_destructibleTilemap != null && _initialDestructibleTiles.Count > 0)
+            {
+                _destructibleTilemap.ClearAllTiles();
+                foreach (var kvp in _initialDestructibleTiles)
+                    _destructibleTilemap.SetTile(kvp.Key, kvp.Value);
+            }
+
+            // Re-enable players at their original spawn positions.
+            foreach (var kvp in _initialPlayerLocalPositions)
+            {
+                var p = kvp.Key;
+                if (p == null) continue;
+
+                var pc = p.GetComponent<PlayerController>();
+                if (pc != null) pc.ResetForEpisode();
+
+                p.transform.localPosition = kvp.Value;
+                if (!p.activeInHierarchy) p.SetActive(true);
+                if (pc != null) pc.enabled = true;
+
+                var bc = p.GetComponent<BombController>();
+                if (bc != null) bc.enabled = true; // OnEnable resets bombsRemaining
+            }
         }
 
         private void ReloadGameScene()
@@ -365,7 +494,7 @@ namespace Scenes.Arena
         private void Standings()
         {
             SyncCoinsToSessionManager();
-            SceneFlowManager.I.GoTo(FlowState.Standings);
+            GoToStandingsClientRpc();
         }
 
         // ------------------- Custom behaviours -------------------
@@ -374,12 +503,10 @@ namespace Scenes.Arena
         {
             Debug.Log("[GameManager] Timer expired → game over!");
             if (TrainingMode.IsActive)
-            {
-                ReloadGameSceneAfterDelay(1.5f);
+                return;   // individual episode resets are handled by Academy / BombermanAgent.OnEpisodeBegin
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !IsServer)
                 return;
-            }
-            SyncCoinsToSessionManager();
-            SceneFlowManager.I.GoTo(FlowState.Standings);
+            GoToStandingsClientRpc();
         }
 
         void LoadAlternateLevelSettings()
@@ -427,5 +554,72 @@ namespace Scenes.Arena
         }
 
         public GameObject[] GetPlayers() => players;
+
+        // ── Online: client-to-player mapping ────────────────────────────────────────
+
+        /// <summary>Host-only: register which arena player ID belongs to a connected client.</summary>
+        public void AssignNetworkClient(ulong clientId, int playerId)
+        {
+            _clientToPlayerId[clientId] = playerId;
+        }
+
+        // ── Online: RPCs ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Clients call this every FixedUpdate to send their input to the host.
+        /// The host pushes it into that player's NetworkPlayerInput component.
+        /// </summary>
+        [ServerRpc(RequireOwnership = false)]
+        public void SendInputServerRpc(Vector2 move, bool bombDown, bool detonate, ServerRpcParams rpc = default)
+        {
+            ulong clientId = rpc.Receive.SenderClientId;
+            if (!_clientToPlayerId.TryGetValue(clientId, out int playerId))
+                return;
+
+            foreach (var p in players)
+            {
+                if (p == null) continue;
+                var pc = p.GetComponent<Player.PlayerController>();
+                if (pc == null || pc.playerId != playerId) continue;
+                var netInput = p.GetComponent<Online.NetworkPlayerInput>();
+                netInput?.ReceiveInput(move, bombDown, detonate);
+                break;
+            }
+        }
+
+        [ClientRpc]
+        private void GoToStandingsClientRpc()
+        {
+            SyncCoinsToSessionManager();
+            SceneFlowManager.I.GoTo(FlowState.Standings);
+        }
+
+        [ClientRpc]
+        private void GoToOversClientRpc()
+        {
+            if (SessionManager.Instance != null)
+            {
+                // Ensure winner info is propagated — host already set it
+            }
+            SceneFlowManager.I.GoToOvers();
+        }
+
+        /// <summary>
+        /// Respawns a single player at their initial spawn position without disturbing
+        /// the arena tiles, bombs, or other players. Used when an agent dies but opponents
+        /// are still alive.
+        /// </summary>
+        public void ResetSinglePlayerForTraining(GameObject player)
+        {
+            if (!_initialPlayerLocalPositions.TryGetValue(player, out var spawnPos)) return;
+
+            player.transform.localPosition = spawnPos;
+
+            var pc = player.GetComponent<PlayerController>();
+            if (pc != null) { pc.ResetForEpisode(); pc.enabled = true; }
+
+            var bc = player.GetComponent<BombController>();
+            if (bc != null) bc.enabled = true;
+        }
     }
 }

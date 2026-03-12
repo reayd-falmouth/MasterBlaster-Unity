@@ -163,7 +163,15 @@ namespace Scenes.Arena.Bomb
 
         private IEnumerator FuseRoutine()
         {
-            yield return new WaitForSeconds(fuseTime);
+            float elapsed = 0f;
+            var bombInfo = GetComponent<BombInfo>();
+            while (elapsed < fuseTime)
+            {
+                elapsed += Time.deltaTime;
+                if (bombInfo != null)
+                    bombInfo.timeRemainingFraction = 1f - Mathf.Clamp01(elapsed / fuseTime);
+                yield return null;
+            }
             Detonate();
         }
 

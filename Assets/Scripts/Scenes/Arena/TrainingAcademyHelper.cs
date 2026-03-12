@@ -24,7 +24,7 @@ namespace Scenes.Arena
 
         private void OnDestroy()
         {
-            if (Academy.Instance != null)
+            if (Academy.IsInitialized)
                 Academy.Instance.OnEnvironmentReset -= OnEnvironmentReset;
         }
 

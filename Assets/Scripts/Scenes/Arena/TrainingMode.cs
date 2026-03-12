@@ -16,7 +16,7 @@ namespace Scenes.Arena
         const string TrainingFlag = "-training";
         const string TrainSceneName = "Train";
 
-        static bool? _cached;
+        static bool? _commandLineCached;
 
         /// <summary>
         /// True when running in the Train scene or when launched with -training.
@@ -26,21 +26,18 @@ namespace Scenes.Arena
         {
             get
             {
-                if (_cached.HasValue)
-                    return _cached.Value;
-                if (Environment.GetCommandLineArgs().Any(
-                    arg => string.Equals(arg, TrainingFlag, StringComparison.OrdinalIgnoreCase)))
+                // Command-line flag: stable for the lifetime of the process, safe to cache.
+                if (!_commandLineCached.HasValue)
                 {
-                    _cached = true;
-                    return true;
+                    _commandLineCached = Environment.GetCommandLineArgs().Any(
+                        arg => string.Equals(arg, TrainingFlag, StringComparison.OrdinalIgnoreCase));
                 }
-                if (Application.isPlaying && SceneManager.GetActiveScene().name.IndexOf(TrainSceneName, StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    _cached = true;
-                    return true;
-                }
-                _cached = false;
-                return false;
+                if (_commandLineCached.Value) return true;
+
+                // Scene name: cheap to re-check; do NOT cache (scene can change mid-session).
+                return Application.isPlaying &&
+                    SceneManager.GetActiveScene().name.IndexOf(
+                        TrainSceneName, StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
     }

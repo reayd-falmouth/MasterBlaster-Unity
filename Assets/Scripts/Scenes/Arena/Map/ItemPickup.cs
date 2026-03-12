@@ -1,12 +1,14 @@
 using Core;
+using Scenes.Arena;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
 using Scenes.Arena.Player.Abilities;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Scenes.Arena.Map
 {
-    public class ItemPickup : MonoBehaviour
+    public class ItemPickup : NetworkBehaviour
     {
         public enum ItemType
         {
@@ -25,6 +27,21 @@ namespace Scenes.Arena.Map
         }
 
         public ItemType type;
+
+        private GameManager _gameManager;
+
+        private void OnEnable()
+        {
+            var root = transform.root != transform ? transform.root : null;
+            _gameManager = (root != null ? root.GetComponentInChildren<GameManager>() : null)
+                           ?? GameManager.Instance;
+            _gameManager?.RegisterItem(this);
+        }
+
+        private void OnDestroy()
+        {
+            _gameManager?.UnregisterItem(this);
+        }
 
         // ItemPickup.cs
         public static void ApplyItem(GameObject player, ItemType type)
@@ -99,8 +116,36 @@ namespace Scenes.Arena.Map
 
         private void OnItemPickup(GameObject player)
         {
-            ApplyItem(player, type);
-            Destroy(gameObject);
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline)
+            {
+                // Online: only host resolves pickup; broadcasts to all clients.
+                if (!IsServer) return;
+                var pc = player.GetComponent<PlayerController>();
+                if (pc != null)
+                    ApplyItemClientRpc((int)type, pc.playerId);
+                Destroy(gameObject);
+            }
+            else
+            {
+                ApplyItem(player, type);
+                Destroy(gameObject);
+            }
+        }
+
+        [ClientRpc]
+        private void ApplyItemClientRpc(int itemType, int playerId)
+        {
+            // Find the player with this ID and apply the item.
+            var players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+            foreach (var pc in players)
+            {
+                if (pc.playerId == playerId)
+                {
+                    ApplyItem(pc.gameObject, (ItemType)itemType);
+                    return;
+                }
+            }
         }
 
         private void OnTriggerEnter2D(Collider2D other)

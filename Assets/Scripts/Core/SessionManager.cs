@@ -162,5 +162,27 @@ namespace Core
                 return null;
             return index;
         }
+
+        // ── Online: network client → arena player ID mapping ─────────────────────────
+
+        private Dictionary<ulong, int> _networkClientToPlayer = new Dictionary<ulong, int>();
+
+        /// <summary>Host-only: record which arena player ID belongs to NGO client <paramref name="clientId"/>.</summary>
+        public void AssignNetworkClient(ulong clientId, int playerId)
+        {
+            _networkClientToPlayer[clientId] = playerId;
+        }
+
+        /// <summary>Returns the arena player ID for <paramref name="clientId"/>, or null if unmapped.</summary>
+        public int? GetPlayerIdForClient(ulong clientId)
+        {
+            return _networkClientToPlayer.TryGetValue(clientId, out int id) ? id : (int?)null;
+        }
+
+        /// <summary>Removes the mapping when a client disconnects.</summary>
+        public void RemoveNetworkClient(ulong clientId)
+        {
+            _networkClientToPlayer.Remove(clientId);
+        }
     }
 }

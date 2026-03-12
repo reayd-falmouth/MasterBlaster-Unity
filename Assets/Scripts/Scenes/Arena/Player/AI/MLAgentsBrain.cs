@@ -13,6 +13,8 @@ namespace Scenes.Arena.Player.AI
     public class MLAgentsBrain : MonoBehaviour, IAIBrain
     {
         private BombermanAgent _agent;
+        // Fix 2: gate hot-path Debug.Log behind this flag (default off for training)
+        [SerializeField] private bool verboseLogging = false;
         private float _lastLogTime = -999f;
 
         private void Awake()
@@ -29,6 +31,10 @@ namespace Scenes.Arena.Player.AI
             out bool detonateHeld
         )
         {
+            // Re-resolve in case the cached reference was to the old (Destroy-marked) component.
+            if (_agent == null)
+                _agent = GetComponent<BombermanAgent>();
+
             if (_agent == null)
             {
                 move = Vector2.zero;
@@ -41,7 +47,7 @@ namespace Scenes.Arena.Player.AI
             placeBomb = _agent.LastPlaceBomb;
             detonateHeld = _agent.LastDetonateHeld;
 
-            if (Time.time - _lastLogTime >= 2f)
+            if (verboseLogging && Time.time - _lastLogTime >= 2f)
             {
                 _lastLogTime = Time.time;
                 Debug.Log($"[MLAgentsBrain] {gameObject.name} → LastMove={move} (zero={move.sqrMagnitude < 0.01f})");

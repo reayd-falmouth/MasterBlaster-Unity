@@ -16,6 +16,8 @@ namespace Scenes.Arena.Player.Abilities
         private AnimatedSpriteRenderer spriteRendererGhost;
 
         private PlayerController pc;
+        private Rigidbody2D rb;
+        private LayerMask ghostExcludeLayers;
         private bool active;
         private float timer;
         private Coroutine endCo;
@@ -23,6 +25,8 @@ namespace Scenes.Arena.Player.Abilities
         private void Awake()
         {
             pc = GetComponentInParent<PlayerController>();
+            rb = GetComponentInParent<Rigidbody2D>();
+            ghostExcludeLayers = LayerMask.GetMask("Destructible", "Bomb");
         }
 
         private void Start()
@@ -38,6 +42,28 @@ namespace Scenes.Arena.Player.Abilities
             timer -= Time.deltaTime;
             if (timer <= 0f && endCo == null)
                 endCo = StartCoroutine(EndRoutine());
+        }
+
+        private void OnDisable()
+        {
+            if (!active) return;
+            active = false;
+
+            // Stop any running end coroutine so it doesn't double-restore
+            if (endCo != null) { StopCoroutine(endCo); endCo = null; }
+
+            // Restore per-rigidbody exclude layers immediately.
+            if (rb != null)
+                rb.excludeLayers &= ~ghostExcludeLayers;
+
+            // Clear visual overrides
+            if (pc != null)
+            {
+                pc.visualOverrideActive = false;
+                pc.visualOverrideRenderer = null;
+            }
+            if (spriteRendererGhost != null)
+                spriteRendererGhost.StopAnimation();
         }
 
         void ApplyUpgrades()
@@ -63,34 +89,16 @@ namespace Scenes.Arena.Player.Abilities
             pc.visualOverrideRenderer = spriteRendererGhost;
             pc.UpdateVisualState(); // force refresh
 
-            // Ignore collisions
-            Physics2D.IgnoreLayerCollision(
-                LayerMask.NameToLayer("Player"),
-                LayerMask.NameToLayer("Destructible"),
-                true
-            );
-            Physics2D.IgnoreLayerCollision(
-                LayerMask.NameToLayer("Player"),
-                LayerMask.NameToLayer("Bomb"),
-                true
-            );
+            // Ignore collisions for this player's rigidbody only
+            rb.excludeLayers |= ghostExcludeLayers;
         }
 
         private IEnumerator EndRoutine()
         {
             active = false;
 
-            // Restore collisions
-            Physics2D.IgnoreLayerCollision(
-                LayerMask.NameToLayer("Player"),
-                LayerMask.NameToLayer("Destructible"),
-                false
-            );
-            Physics2D.IgnoreLayerCollision(
-                LayerMask.NameToLayer("Player"),
-                LayerMask.NameToLayer("Bomb"),
-                false
-            );
+            // Restore collisions for this player's rigidbody only
+            rb.excludeLayers &= ~ghostExcludeLayers;
 
             // Clear override → back to normal visuals
             pc.visualOverrideActive = false;

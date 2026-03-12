@@ -95,12 +95,15 @@ namespace Scenes.Arena
         public static List<(PlayerSlot slot, int playerId)> GetPlayerSetup(int playerCount)
         {
             var result = new List<(PlayerSlot, int)>();
-            if (playerCount < 2 || playerCount > 5)
+            if (playerCount < 1 || playerCount > 5)
                 return result;
 
             int id = 1;
             switch (playerCount)
             {
+                case 1:
+                    result.Add((PlayerSlot.TopLeft, id++));
+                    break;
                 case 2:
                     result.Add((PlayerSlot.TopLeft, id++));
                     result.Add((PlayerSlot.BottomRight, id++));

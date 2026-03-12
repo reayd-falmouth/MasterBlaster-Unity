@@ -15,7 +15,18 @@ namespace Scenes.Arena.Player
         private Vector2 _lastMove;
         private bool _pendingBombDown;
         private bool _detonateHeld = true;
+        // Fix 2: gate hot-path Debug.Log behind this flag (default off for training)
+        [SerializeField] private bool verboseLogging = false;
         private float _lastLogTime = -999f;
+        private int _lastTickFrame = -1;
+        private GameManager _localGameManager;
+
+        private void Awake()
+        {
+            var root = transform.root != transform ? transform.root : null;
+            _localGameManager = (root != null ? root.GetComponentInChildren<GameManager>() : null)
+                                ?? GameManager.Instance;
+        }
 
         public void Init(IAIBrain brain)
         {
@@ -23,49 +34,25 @@ namespace Scenes.Arena.Player
             _bombController = GetComponent<BombController>();
         }
 
-        private void Update()
+        private void EnsureTicked()
         {
+            if (Time.frameCount == _lastTickFrame) return;
+            _lastTickFrame = Time.frameCount;
             if (_brain == null) return;
-
-            var gm = GameManager.Instance;
-            GameObject[] allPlayers = gm != null ? gm.GetPlayers() : null;
-
-            _brain.Tick(
-                transform,
-                _bombController,
-                allPlayers,
-                out Vector2 move,
-                out bool placeBomb,
-                out bool detonateHeld
-            );
-
-            _lastMove = move;
-            if (placeBomb)
-                _pendingBombDown = true;
+            GameObject[] allPlayers = _localGameManager?.GetPlayers();
+            _brain.Tick(transform, _bombController, allPlayers,
+                out _lastMove, out bool placeBomb, out bool detonateHeld);
+            if (placeBomb) _pendingBombDown = true;
             _detonateHeld = detonateHeld;
-
-            if (Time.time - _lastLogTime >= 1.5f)
+            if (verboseLogging && Time.time - _lastLogTime >= 1.5f)
             {
                 _lastLogTime = Time.time;
-                Debug.Log($"[AIPlayerInput] {gameObject.name} move={move} (zero={move.sqrMagnitude < 0.01f})");
+                Debug.Log($"[AIPlayerInput] {gameObject.name} move={_lastMove} (zero={_lastMove.sqrMagnitude < 0.01f})");
             }
         }
 
-        public Vector2 GetMoveDirection()
-        {
-            return _lastMove;
-        }
-
-        public bool GetBombDown()
-        {
-            if (!_pendingBombDown) return false;
-            _pendingBombDown = false;
-            return true;
-        }
-
-        public bool GetDetonateHeld()
-        {
-            return _detonateHeld;
-        }
+        public Vector2 GetMoveDirection() { EnsureTicked(); return _lastMove; }
+        public bool GetBombDown()         { EnsureTicked(); if (!_pendingBombDown) return false; _pendingBombDown = false; return true; }
+        public bool GetDetonateHeld()     { EnsureTicked(); return _detonateHeld; }
     }
 }

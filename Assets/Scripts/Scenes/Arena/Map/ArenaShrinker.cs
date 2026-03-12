@@ -3,6 +3,7 @@ using Core;
 using Scenes.Arena;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
@@ -15,8 +16,11 @@ namespace Scenes.Arena.Map
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Grid), typeof(AudioSource))]
-    public class ArenaShrinker : MonoBehaviour
+    public class ArenaShrinker : NetworkBehaviour
     {
+        /// <summary>Replicated timer so client UIs stay in sync with the host.</summary>
+        private NetworkVariable<float> _netTimeRemaining = new NetworkVariable<float>(
+            0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         // -------------------- Timer & Alarm --------------------
         [Header("Timer")]
         [Tooltip("Only run timer/alarm/shrinking when enabled.")]
@@ -50,9 +54,6 @@ namespace Scenes.Arena.Map
 
         [SerializeField]
         private float pulseSpeed = 5f; // sin speed
-
-        [SerializeField]
-        private float alarmRepeatSeconds = 1.0f; // fallback loop via PlayAlarm()
 
         // --- Timer & Alarm (existing fields stay the same) ---
 
@@ -100,6 +101,9 @@ namespace Scenes.Arena.Map
 
         [SerializeField]
         private Color gizmoColor = new Color(1f, 0.3f, 0.2f, 0.35f);
+
+        // Fix 5: pre-allocated overlap buffer — avoids OverlapBoxAll array alloc during shrink
+        private static readonly Collider2D[] _overlapBuffer = new Collider2D[16];
 
         // internal state
         private float timeRemaining;
@@ -187,12 +191,20 @@ namespace Scenes.Arena.Map
         // -------------------- Internals --------------------
         private IEnumerator TimerRoutine()
         {
+            // In online play, only the host runs the timer.
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && !IsServer)
+                yield break;
+
             float alarmTime = matchDuration * Mathf.Clamp01(alarmThresholdFraction);
             float shrinkTime = matchDuration * Mathf.Clamp01(shrinkThresholdFraction);
 
             while (timerRunning && timeRemaining > 0f)
             {
                 timeRemaining -= Time.deltaTime;
+
+                if (isOnline)
+                    _netTimeRemaining.Value = timeRemaining;
 
                 if (!alarmActive && timeRemaining <= alarmTime)
                     StartAlarm();
@@ -223,9 +235,8 @@ namespace Scenes.Arena.Map
             {
                 endingTriggered = true;
                 if (TrainingMode.IsActive)
-                    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-                else
-                    SceneFlowManager.I.GoTo(FlowState.Standings);
+                    yield break;   // timer is disabled in training; episode resets are handled per-arena by BombermanAgent
+                SceneFlowManager.I.GoTo(FlowState.Standings);
             }
         }
 
@@ -347,6 +358,15 @@ namespace Scenes.Arena.Map
             shrinkingComplete = true;
         }
 
+        /// <summary>Tells clients to place an indestructible block at <paramref name="worldPos"/>.</summary>
+        [ClientRpc]
+        private void PlaceBlockClientRpc(Vector3 worldPos)
+        {
+            if (IsServer) return;
+            if (indestructiblePrefab != null)
+                Instantiate(indestructiblePrefab, worldPos, Quaternion.identity, indestructiblesTilemap.transform);
+        }
+
         private void PlaceBlock(Vector3Int cell)
         {
             Vector3 worldCenter = indestructiblesTilemap.GetCellCenterWorld(cell);
@@ -354,9 +374,11 @@ namespace Scenes.Arena.Map
             if (destructiblesTilemap && destructiblesTilemap.HasTile(cell))
                 destructiblesTilemap.SetTile(cell, null);
 
-            var hits = Physics2D.OverlapBoxAll(worldCenter, overlapBoxSize, 0f, overlapMask);
-            foreach (var h in hits)
+            // Fix 5: NonAlloc reuses static buffer instead of allocating a new array each block
+            int hitCount = Physics2D.OverlapBoxNonAlloc(worldCenter, overlapBoxSize, 0f, _overlapBuffer, overlapMask);
+            for (int hi = 0; hi < hitCount; hi++)
             {
+                var h = _overlapBuffer[hi];
                 if (!h)
                     continue;
 
@@ -385,6 +407,10 @@ namespace Scenes.Arena.Map
                 Quaternion.identity,
                 indestructiblesTilemap.transform
             );
+
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && IsServer)
+                PlaceBlockClientRpc(worldCenter);
 
             // 3) Play its SFX
             var src = go.GetComponent<AudioSource>();

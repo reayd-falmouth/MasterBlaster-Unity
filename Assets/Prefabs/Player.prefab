@@ -986,7 +986,6 @@ GameObject:
   - component: {fileID: 5879614341149993122}
   - component: {fileID: 5879614341149993121}
   - component: {fileID: 3042097952133095722}
-  - component: {fileID: 1160224270886855027}
   - component: {fileID: 8079506904181689458}
   m_Layer: 3
   m_Name: Player
@@ -1138,6 +1137,7 @@ MonoBehaviour:
   explosionDelay: 0.1
   destructibleTiles: {fileID: 0}
   destructiblePrefab: {fileID: -8738203639632321532, guid: 1ac7a5f8ae90ed04aa34c0753307c241, type: 3}
+  indestructibleTiles: {fileID: 0}
 --- !u!114 &3042097952133095722
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1163,19 +1163,6 @@ MonoBehaviour:
   coinPrefab: {fileID: 1671571660335848563, guid: 41b855585bba74d4181c61c7e4783771, type: 3}
   remoteBombPrefab: {fileID: 1671571660335848563, guid: 978572c02650fb64a9ff0cbdcbe81634, type: 3}
   offset: {x: 1, y: 0, z: 0}
---- !u!114 &1160224270886855027
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5879614341149993150}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54cdfb0d148242b68931123ab03b1a97, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerId: 1
 --- !u!114 &8079506904181689458
 MonoBehaviour:
   m_ObjectHideFlags: 0

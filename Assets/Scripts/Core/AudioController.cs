@@ -143,7 +143,6 @@ namespace Core
         /// <summary>Minimum base pitch for arena music so returning to the arena never sounds pitched down (e.g. when a scene overrides arenaPitchBase to 1.0).</summary>
         private const float ArenaPitchBaseMinimum = 1.25f;
 
-        private int lastTrackIndex = -1; // -1 means "no track has been played yet"
         private int arenaMusicPlayCount;
         private float arenaPitchBaseSnapshot = -1f; // actual pitch on first play (from prefab/source), set once
 
@@ -158,7 +157,7 @@ namespace Core
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
         }

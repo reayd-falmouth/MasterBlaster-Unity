@@ -1,4 +1,5 @@
 using Core;
+using Scenes.Arena;
 using UnityEngine;
 
 namespace Scenes.Arena.Bomb
@@ -9,6 +10,7 @@ namespace Scenes.Arena.Bomb
 
         private AudioSource audioSource;
         private float explosionClipLength;
+        private GameManager _gameManager;
 
         private void Awake()
         {
@@ -18,6 +20,16 @@ namespace Scenes.Arena.Bomb
             audioSource.playOnAwake = false;
             if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
                 audioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
+
+            var root = transform.root != transform ? transform.root : null;
+            _gameManager = (root != null ? root.GetComponentInChildren<GameManager>() : null)
+                           ?? GameManager.Instance;
+            _gameManager?.RegisterExplosion(this);
+        }
+
+        private void OnDestroy()
+        {
+            _gameManager?.UnregisterExplosion(this);
         }
 
         /// <summary>Play the explosion sound once on this object's AudioSource (call only on the central explosion). DestroyAfter will delay destruction until the clip finishes.</summary>

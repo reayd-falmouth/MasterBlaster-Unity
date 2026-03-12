@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using Core;
 using Scenes.Arena.Map;
 using Scenes.Arena.Player;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
 namespace Scenes.Arena.Bomb
 {
-    public class BombController : MonoBehaviour
+    public class BombController : NetworkBehaviour
     {
         [Header("Bomb")]
         public KeyCode inputKey = KeyCode.LeftShift;
@@ -30,26 +31,88 @@ namespace Scenes.Arena.Bomb
         public Tilemap destructibleTiles;
         public Destructible destructiblePrefab;
 
-        private readonly List<GameObject> activeBombs = new List<GameObject>();
+        [Header("Indestructible (auto-detected)")]
+        [HideInInspector] public Tilemap indestructibleTiles;
+
+        // Fix 8: HashSet gives O(1) Add/Remove/Contains vs O(n) List.Remove
+        private readonly HashSet<GameObject> activeBombs = new HashSet<GameObject>();
+
+        // Fix 5: pre-allocated overlap buffers — two separate buffers so ExplodeBomb center-overlap
+        // doesn't overwrite the buffer mid-iteration in ExplodeCoroutine during chain reactions
+        private static readonly Collider2D[] _explodeBuffer = new Collider2D[16];
+        private static readonly Collider2D[] _centerBuffer  = new Collider2D[16];
 
         private int baseBombAmount;
         private int baseExplosionRadius;
         private Player.IPlayerInput _inputProvider;
 
+        // Fix 6: bool flag avoids per-frame destroyed-object cast (is UnityEngine.Object uo && uo == null)
+        private bool _inputProviderValid;
+
+        // Fix 7: cached component references — set once in Awake, avoids GetComponent per bomb-place/destroy
+        private PlayerController _playerController;
+        private Scenes.Arena.Player.AI.BombermanAgent _agentNotify;
+
+        // Non-null when the player sits under a shared arena root (multi-arena training).
+        // Bombs and explosions are parented here so BombermanAgent scoped searches work correctly.
+        private Transform _arenaRoot;
+
+        // Always-active MonoBehaviour used to host coroutines. The player GameObject may be
+        // inactive when a bomb detonates (player died before fuse expired), so we must not call
+        // StartCoroutine on 'this' in that case. The arena's GameManager is always active.
+        private MonoBehaviour _coroutineRunner;
+
         private void Awake()
         {
             baseBombAmount = bombAmount;
             baseExplosionRadius = explosionRadius;
+
+            // Arena root: use the hierarchy root only when this object is NOT already the root.
+            _arenaRoot = transform.root != transform ? transform.root : null;
+
+            // Cache an always-active coroutine runner.
+            var gm = (_arenaRoot != null
+                ? _arenaRoot.GetComponentInChildren<GameManager>()
+                : null) ?? GameManager.Instance;
+            _coroutineRunner = (gm as MonoBehaviour) ?? this;
+
+            // Fix 7: cache both references once
+            _playerController = GetComponent<PlayerController>();
+            _agentNotify      = GetComponent<Scenes.Arena.Player.AI.BombermanAgent>();
+
+            if (!indestructibleTiles)
+            {
+                var tilemaps = _arenaRoot != null
+                    ? _arenaRoot.GetComponentsInChildren<Tilemap>()
+                    : FindObjectsByType<Tilemap>(FindObjectsSortMode.None);
+                foreach (var t in tilemaps)
+                    if (t.name == "Indestructibles") { indestructibleTiles = t; break; }
+            }
         }
 
         private void Start()
         {
+            // Fix 6: set valid flag so Update skips GetComponent in steady state
             _inputProvider = GetComponent<Player.IPlayerInput>();
+            _inputProviderValid = _inputProvider != null;
         }
 
         private void Update()
         {
+            // Re-resolve if null or if the reference points to a destroyed component
+            // (mirrors PlayerController.Update; needed when AttachInputProvider Destroy+re-adds AIPlayerInput)
+            if (!_inputProviderValid || (_inputProvider is UnityEngine.Object uoInput && uoInput == null))
+            {
+                _inputProvider = GetComponent<Player.IPlayerInput>();
+                _inputProviderValid = _inputProvider != null;
+            }
+
             if (bombsRemaining <= 0)
+                return;
+
+            // In online play, only the host places bombs.
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && !IsServer)
                 return;
 
             bool wantBomb = _inputProvider != null ? _inputProvider.GetBombDown() : Input.GetKeyDown(inputKey);
@@ -59,7 +122,6 @@ namespace Scenes.Arena.Bomb
                 if (bomb == null)
                     return;
 
-                var player = GetComponent<PlayerController>();
                 var brain = bomb.GetComponent<RemoteBombController>();
 
                 var mode = remoteBomb
@@ -70,12 +132,13 @@ namespace Scenes.Arena.Bomb
                             : RemoteBombController.BombMode.Fuse
                     );
 
-                brain.Init(player, this, mode, inputKey, bombFuseTime);
+                // Fix 7: use cached _playerController instead of GetComponent per bomb-place
+                brain.Init(_playerController, this, mode, inputKey, bombFuseTime);
             }
         }
 
         /// <summary>
-        /// Spawns a bomb at the player’s grid cell and returns it.
+        /// Spawns a bomb at the player's grid cell and returns it.
         /// Handles destructible blocking and duplicate checks.
         /// </summary>
         private GameObject SpawnBomb()
@@ -88,15 +151,23 @@ namespace Scenes.Arena.Bomb
             if (destructibleTiles.GetTile(cell) != null)
                 return null;
 
+            // Fix 8: HashSet enumeration still works; position check is now O(1) per entry
             foreach (var b in activeBombs)
                 if (b != null && (Vector2)b.transform.position == position)
                     return null;
 
-            GameObject bomb = Instantiate(bombPrefab, position, Quaternion.identity);
+            GameObject bomb = Instantiate(bombPrefab, position, Quaternion.identity, _arenaRoot);
             var info = bomb.AddComponent<BombInfo>();
             info.explosionRadius = explosionRadius;
             activeBombs.Add(bomb);
             bombsRemaining--;
+
+            // Fix 7: use cached _agentNotify instead of GetComponent per bomb-place
+            _agentNotify?.NotifyPlacedBomb();
+
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && IsServer)
+                SpawnBombClientRpc(position, explosionRadius);
 
             return bomb;
         }
@@ -108,7 +179,7 @@ namespace Scenes.Arena.Bomb
             float delayStep = 0.05f
         )
         {
-            StartCoroutine(ExplodeCoroutine(position, direction, length, delayStep));
+            _coroutineRunner.StartCoroutine(ExplodeCoroutine(position, direction, length, delayStep));
         }
 
         private IEnumerator ExplodeCoroutine(
@@ -122,13 +193,15 @@ namespace Scenes.Arena.Bomb
             {
                 Vector2 nextPos = position + direction * i;
 
-                // Grab everything in this cell
-                var hits = Physics2D.OverlapBoxAll(nextPos, Vector2.one / 2f, 0f);
+                // Fix 5: NonAlloc reuses _explodeBuffer; separate buffer from _centerBuffer so
+                // ExplodeBomb (called synchronously below) doesn't overwrite our iteration buffer
+                int count = Physics2D.OverlapBoxNonAlloc(nextPos, Vector2.one / 2f, 0f, _explodeBuffer);
 
                 bool blocked = false;
 
-                foreach (var hit in hits)
+                for (int j = 0; j < count; j++)
                 {
+                    var hit = _explodeBuffer[j];
                     if (hit == null)
                         continue;
 
@@ -178,7 +251,7 @@ namespace Scenes.Arena.Bomb
                     yield break;
 
                 // Spawn explosion fire
-                Explosion explosion = Instantiate(explosionPrefab, nextPos, Quaternion.identity);
+                Explosion explosion = Instantiate(explosionPrefab, nextPos, Quaternion.identity, _arenaRoot);
                 explosion.SetDirection(direction);
                 explosion.DestroyAfter(explosionDuration);
 
@@ -195,27 +268,32 @@ namespace Scenes.Arena.Bomb
             position.x = Mathf.Round(position.x);
             position.y = Mathf.Round(position.y);
 
+            // Fix 8: HashSet.Remove is O(1)
             activeBombs.Remove(bomb);
             Destroy(bomb);
             bombsRemaining++;
 
             // Center fire – play explosion sound on this instance only
-            Explosion explosion = Instantiate(explosionPrefab, position, Quaternion.identity);
+            Explosion explosion = Instantiate(explosionPrefab, position, Quaternion.identity, _arenaRoot);
             explosion.PlayExplosionSound();
             explosion.DestroyAfter(explosionDuration);
 
-            // Apply damage to any player in the center cell (same overlap as propagation)
-            var centerHits = Physics2D.OverlapBoxAll(position, Vector2.one / 2f, 0f);
-            foreach (var hit in centerHits)
+            // Fix 5: use _centerBuffer (separate from _explodeBuffer) so chain-reaction calls
+            // from within ExplodeCoroutine don't overwrite the coroutine's iteration buffer
+            int centerCount = Physics2D.OverlapBoxNonAlloc(position, Vector2.one / 2f, 0f, _centerBuffer);
+            for (int i = 0; i < centerCount; i++)
             {
+                var hit = _centerBuffer[i];
                 if (hit == null) continue;
                 var pc = hit.GetComponent<PlayerController>();
                 if (pc != null && pc.enabled)
                     pc.TryApplyExplosionDamage();
             }
 
-            // Defer propagation to next frame to avoid stack overflow when two bombs chain
-            StartCoroutine(ExplodeBombPropagateNextFrame(position));
+            // Defer propagation to next frame to avoid stack overflow when two bombs chain.
+            // Use _coroutineRunner (the arena's GameManager) so this works even when the player
+            // is inactive (e.g. player died before the fuse expired).
+            _coroutineRunner.StartCoroutine(ExplodeBombPropagateNextFrame(position));
         }
 
         private IEnumerator ExplodeBombPropagateNextFrame(Vector2 position)
@@ -243,6 +321,47 @@ namespace Scenes.Arena.Bomb
                 }
 
                 destructibleTiles.SetTile(cell, null);
+                // Fix 7: use cached _agentNotify instead of GetComponent per block-destroy
+                _agentNotify?.NotifyDestroyedBlock();
+
+                bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+                if (isOnline && IsServer)
+                    ClearDestructibleClientRpc(cell);
+            }
+        }
+
+        // ── Online ClientRpcs ───────────────────────────────────────────────────────
+
+        /// <summary>Tells clients to clear the destructible tile at <paramref name="cell"/>.</summary>
+        [ClientRpc]
+        private void ClearDestructibleClientRpc(Vector3Int cell)
+        {
+            // Already cleared on host; clients need to update their local tilemap.
+            if (IsServer) return;
+            if (destructibleTiles != null)
+                destructibleTiles.SetTile(cell, null);
+        }
+
+        /// <summary>Tells clients to show an explosion visual segment.</summary>
+        [ClientRpc]
+        public void ShowExplosionClientRpc(Vector2 pos, Vector2 dir, int length)
+        {
+            if (IsServer) return;
+            Explode(pos, dir, length, explosionDelay);
+        }
+
+        /// <summary>Tells clients to spawn a visual-only bomb at <paramref name="pos"/>.</summary>
+        [ClientRpc]
+        public void SpawnBombClientRpc(Vector2 pos, int radius)
+        {
+            if (IsServer) return;
+            // Spawn a visual-only bomb (no fuse logic; host drives detonation).
+            if (bombPrefab != null)
+            {
+                var visual = Instantiate(bombPrefab, pos, Quaternion.identity, _arenaRoot);
+                // Disable the RemoteBombController so it doesn't self-detonate on clients.
+                var rbc = visual.GetComponent<RemoteBombController>();
+                if (rbc != null) rbc.enabled = false;
             }
         }
 
@@ -279,13 +398,13 @@ namespace Scenes.Arena.Bomb
 
         private void OnEnable()
         {
+            activeBombs.Clear();
             bombsRemaining = bombAmount;
 
-            // Load upgrades from PlayerPrefs
-            var pc = GetComponent<PlayerController>();
-            if (pc != null)
+            // Fix 7: use cached _playerController instead of GetComponent
+            if (_playerController != null)
             {
-                ApplyUpgrades(pc.playerId);
+                ApplyUpgrades(_playerController.playerId);
             }
         }
 
@@ -337,9 +456,9 @@ namespace Scenes.Arena.Bomb
             )
                 remoteBomb = true;
 
-            Debug.Log(
-                $"[BombController] Player {playerId} upgrades applied: bombs={bombAmount}, radius={explosionRadius}, timeBomb={timeBomb}, remoteBomb={remoteBomb}"
-            );
+            // Debug.Log(
+            //     $"[BombController] Player {playerId} upgrades applied: bombs={bombAmount}, radius={explosionRadius}, timeBomb={timeBomb}, remoteBomb={remoteBomb}"
+            // );
         }
     }
 }
