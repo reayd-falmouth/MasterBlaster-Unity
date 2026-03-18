@@ -133,7 +133,9 @@ namespace Core
         {
             Debug.Log($"[Flow] {state} → {next}");
             state = next;
-            SceneManager.LoadScene(SceneFor(next), LoadSceneMode.Single);
+            string sceneName = SceneFor(next);
+            AudioController.I?.PreviewSceneMusic(sceneName);
+            SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
         }
 
         SceneNamesConfig GetConfig() =>

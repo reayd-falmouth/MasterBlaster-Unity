@@ -1,16 +1,23 @@
 using System.Collections;
 using Core;
+using MoreMountains.Feedbacks;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Map;
 using Scenes.Arena.Player.Abilities;
 using Scenes.Shop;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Scenes.Arena.Player
 {
     [RequireComponent(typeof(Rigidbody2D))]
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : NetworkBehaviour
     {
+        // NetworkVariables so clients can animate from server-authoritative direction.
+        private NetworkVariable<Vector2> _netDirection = new NetworkVariable<Vector2>(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<bool> _netStop = new NetworkVariable<bool>(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         public event System.Func<bool> OnExplosionHit;
         public Vector2 Direction => direction;
 
@@ -34,6 +41,8 @@ namespace Scenes.Arena.Player
         public bool stop;
 
         private RemoteBombController pushingBomb;
+        private IPlayerInput _inputProvider;
+        private GameManager _localGameManager;
 
         [Header("Input")]
         public KeyCode inputUp = KeyCode.W;
@@ -56,19 +65,20 @@ namespace Scenes.Arena.Player
         [HideInInspector]
         public AnimatedSpriteRenderer visualOverrideRenderer;
 
-        private AudioSource audioSource;
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player deathFeedbacks;
+        [SerializeField] private MMF_Player randomItemFeedbacks;
 
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
             activeSpriteRenderer = spriteRendererDown;
 
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-                audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
-                audioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
+            // Prefer a GameManager in the same arena hierarchy; fall back to the global Instance
+            // for single-arena scenes where the player is a root-level GameObject.
+            var root = transform.root != transform ? transform.root : null;
+            _localGameManager = (root != null ? root.GetComponentInChildren<GameManager>() : null)
+                                ?? GameManager.Instance;
         }
 
         private void Start()
@@ -81,8 +91,15 @@ namespace Scenes.Arena.Player
                 playerId = 1;
             }
 
+            _inputProvider = GetComponent<IPlayerInput>();
+            Debug.Log($"[PlayerController] {gameObject.name} Start: inputProvider={_inputProvider?.GetType().Name ?? "NULL"}");
             ApplyUpgrades();
         }
+
+        // Fix 2: gate hot-path Debug.Log behind this flag (default off for training)
+        [SerializeField] private bool verboseLogging = false;
+
+        private float _lastPCLogTime = -999f;
 
         private void Update()
         {
@@ -90,21 +107,35 @@ namespace Scenes.Arena.Player
             if (visualState == PlayerVisualState.Remote)
                 return;
 
-            if (Input.GetKey(inputUp))
+            // Lazy-resolve: also re-resolve if the interface reference points to a destroyed Unity component.
+            // (C# null check alone misses destroyed MonoBehaviours held via an interface reference.)
+            if (_inputProvider == null || (_inputProvider is UnityEngine.Object uo && uo == null))
+                _inputProvider = GetComponent<IPlayerInput>();
+
+            Vector2 move = _inputProvider != null ? _inputProvider.GetMoveDirection() : GetLegacyMove();
+
+            if (verboseLogging && Time.time - _lastPCLogTime >= 2f)
             {
-                SetDirection(Vector2.up, spriteRendererUp);
+                _lastPCLogTime = Time.time;
+                Debug.Log($"[PlayerController] {gameObject.name} Update: provider={_inputProvider?.GetType().Name ?? "NULL"} move={move} stop={stop} enabled={enabled}");
             }
-            else if (Input.GetKey(inputDown))
+
+            if (move.sqrMagnitude > 0.01f)
             {
-                SetDirection(Vector2.down, spriteRendererDown);
-            }
-            else if (Input.GetKey(inputLeft))
-            {
-                SetDirection(Vector2.left, spriteRendererLeft);
-            }
-            else if (Input.GetKey(inputRight))
-            {
-                SetDirection(Vector2.right, spriteRendererRight);
+                if (Mathf.Abs(move.x) >= Mathf.Abs(move.y))
+                {
+                    if (move.x > 0)
+                        SetDirection(Vector2.right, spriteRendererRight);
+                    else
+                        SetDirection(Vector2.left, spriteRendererLeft);
+                }
+                else
+                {
+                    if (move.y > 0)
+                        SetDirection(Vector2.up, spriteRendererUp);
+                    else
+                        SetDirection(Vector2.down, spriteRendererDown);
+                }
             }
             else
             {
@@ -112,10 +143,30 @@ namespace Scenes.Arena.Player
             }
         }
 
+        private Vector2 GetLegacyMove()
+        {
+            if (Input.GetKey(inputUp)) return Vector2.up;
+            if (Input.GetKey(inputDown)) return Vector2.down;
+            if (Input.GetKey(inputLeft)) return Vector2.left;
+            if (Input.GetKey(inputRight)) return Vector2.right;
+            return Vector2.zero;
+        }
+
         private void FixedUpdate()
         {
-            Vector2 position = rb.position;
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
 
+            if (isOnline)
+            {
+                // Clients animate from the replicated direction; only host moves the rigidbody.
+                if (!IsServer) return;
+
+                // Push state to clients via NetworkVariables.
+                _netDirection.Value = direction;
+                _netStop.Value = stop;
+            }
+
+            Vector2 position = rb.position;
             if (!stop)
             {
                 Vector2 translation = speed * Time.fixedDeltaTime * direction;
@@ -130,22 +181,24 @@ namespace Scenes.Arena.Player
             UpdateVisualState();
         }
 
+        /// <summary>Apply explosion damage: run OnExplosionHit handlers; if none block, run death. Call from trigger or from BombController.</summary>
+        public void TryApplyExplosionDamage()
+        {
+            if (OnExplosionHit != null)
+            {
+                foreach (System.Func<bool> handler in OnExplosionHit.GetInvocationList())
+                {
+                    if (handler())
+                        return; // blocked by ability
+                }
+            }
+            DeathSequence();
+        }
+
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (other.gameObject.layer == LayerMask.NameToLayer("Explosion"))
-            {
-                // If any subscriber returns true, we cancel death
-                if (OnExplosionHit != null)
-                {
-                    foreach (System.Func<bool> handler in OnExplosionHit.GetInvocationList())
-                    {
-                        if (handler())
-                            return; // blocked by ability
-                    }
-                }
-
-                DeathSequence();
-            }
+                TryApplyExplosionDamage();
         }
 
         private void DeathSequence()
@@ -153,22 +206,57 @@ namespace Scenes.Arena.Player
             enabled = false;
             GetComponent<BombController>().enabled = false;
 
+            var rlAgent = GetComponent<Scenes.Arena.Player.AI.BombermanAgent>();
+            if (rlAgent != null)
+            {
+                if (TrainingMode.IsActive)
+                {
+                    // Skip the 1.25s animation entirely: EndEpisode() calls OnEpisodeBegin()
+                    // synchronously, which resets the arena before DeathSequence() can overwrite it.
+                    rlAgent.NotifyDeath();
+                    return;
+                }
+                rlAgent.NotifyDeath();
+            }
+
+            // Broadcast death animation to all clients when online.
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && IsServer)
+                PlayDeathClientRpc(playerId);
+            else
+                PlayDeathLocally();
+        }
+
+        [ClientRpc]
+        private void PlayDeathClientRpc(int pid)
+        {
+            PlayDeathLocally();
+        }
+
+        private void PlayDeathLocally()
+        {
             visualState = PlayerVisualState.Death;
             UpdateVisualState();
-
-            if (
-                audioSource != null
-                && AudioController.I != null
-                && AudioController.I.DeathClip != null
-            )
-                audioSource.PlayOneShot(AudioController.I.DeathClip, 0.8f);
+            deathFeedbacks?.PlayFeedbacks(transform.position);
             Invoke(nameof(OnDeathSequenceEnded), 1.25f);
         }
 
         private void OnDeathSequenceEnded()
         {
             gameObject.SetActive(false);
-            GameManager.Instance.CheckWinState();
+            _localGameManager?.CheckWinState();
+        }
+
+        /// <summary>
+        /// Called by GameManager to reset this player for a new training episode.
+        /// Cancels any in-flight death sequence, restores visual state, and re-enables components.
+        /// </summary>
+        public void ResetForEpisode()
+        {
+            CancelInvoke(nameof(OnDeathSequenceEnded));
+            stop = false;
+            visualState = PlayerVisualState.Normal;
+            UpdateVisualState();
         }
 
         // public void ApplyUpgrades()
@@ -323,8 +411,7 @@ namespace Scenes.Arena.Player
                     Random.Range(0, System.Enum.GetValues(typeof(ItemPickup.ItemType)).Length);
             } while (randomType == ItemPickup.ItemType.Random);
 
-            // Give feedback that a random item was rolled
-            AudioController.I.PlayPowerUp();
+            randomItemFeedbacks?.PlayFeedbacks(transform.position);
 
             ItemPickup.ApplyItem(this.gameObject, randomType);
         }

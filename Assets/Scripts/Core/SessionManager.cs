@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Scenes.Shop;
+using UnityEngine;
+using UnityEngine.InputSystem;
 using Utilities;
 
 namespace Core
@@ -23,6 +25,9 @@ namespace Core
         /// <summary>Session-only: display name of match winner. Set when transitioning to Overs, cleared on new game.</summary>
         public string MatchWinnerName;
 
+        /// <summary>Player ID -> device index (1+ = gamepad only). Missing or -1 means AI.</summary>
+        private Dictionary<int, int> _playerDeviceIndex = new Dictionary<int, int>();
+
         // 3. Setup/Cleanup Method
         public void Initialize(int playerCount)
         {
@@ -31,6 +36,7 @@ namespace Core
             PlayerWins.Clear();
             MatchWinnerPlayerId = 0;
             MatchWinnerName = null;
+            _playerDeviceIndex.Clear();
             for (int id = 1; id <= playerCount; id++)
             {
                 // Initialize each player with a dictionary to store their upgrades
@@ -113,6 +119,77 @@ namespace Core
         public string GetMatchWinnerName()
         {
             return string.IsNullOrEmpty(MatchWinnerName) ? "Unknown" : MatchWinnerName;
+        }
+
+        /// <summary>Assign input devices to players. Only controllers (gamepads) are allowed; keyboard is not assigned.
+        /// Device 1 = first gamepad, 2 = second, etc. Slots without a controller get AI. Call after Initialize(playerCount).</summary>
+        public void AssignInputDevices(int playerCount)
+        {
+            _playerDeviceIndex.Clear();
+            int joystickCount = GetConnectedJoystickCount();
+            int nextDevice = 1;
+
+            var allGamepads = Gamepad.all;
+            Debug.Log($"[SessionManager] AssignInputDevices — playerCount={playerCount}, gamepads detected={allGamepads.Count}");
+            for (int i = 0; i < allGamepads.Count; i++)
+                Debug.Log($"  Gamepad[{i}]: {allGamepads[i].displayName} ({allGamepads[i].GetType().Name})");
+
+            for (int id = 1; id <= playerCount; id++)
+            {
+                if (nextDevice <= joystickCount)
+                {
+                    _playerDeviceIndex[id] = nextDevice;
+                    Debug.Log($"  Player {id} → Gamepad[{nextDevice - 1}]: {allGamepads[nextDevice - 1].displayName}");
+                    nextDevice++;
+                }
+                else
+                {
+                    _playerDeviceIndex[id] = -1; // AI
+                    Debug.Log($"  Player {id} → AI (no gamepad available)");
+                }
+            }
+        }
+
+        /// <summary>Uses the new Input System's Gamepad list so one physical controller is counted once (legacy GetJoystickNames can over-report).</summary>
+        private static int GetConnectedJoystickCount()
+        {
+            return Gamepad.all.Count;
+        }
+
+        /// <summary>Number of connected gamepads/controllers. Use to require at least one before playing.</summary>
+        public static int GetConnectedControllerCount()
+        {
+            return GetConnectedJoystickCount();
+        }
+
+        /// <summary>Returns assigned device index for the player (1+ = gamepad; keyboard not used), or null if this player is AI.</summary>
+        public int? GetAssignedDevice(int playerId)
+        {
+            if (!_playerDeviceIndex.TryGetValue(playerId, out int index) || index < 0)
+                return null;
+            return index;
+        }
+
+        // ── Online: network client → arena player ID mapping ─────────────────────────
+
+        private Dictionary<ulong, int> _networkClientToPlayer = new Dictionary<ulong, int>();
+
+        /// <summary>Host-only: record which arena player ID belongs to NGO client <paramref name="clientId"/>.</summary>
+        public void AssignNetworkClient(ulong clientId, int playerId)
+        {
+            _networkClientToPlayer[clientId] = playerId;
+        }
+
+        /// <summary>Returns the arena player ID for <paramref name="clientId"/>, or null if unmapped.</summary>
+        public int? GetPlayerIdForClient(ulong clientId)
+        {
+            return _networkClientToPlayer.TryGetValue(clientId, out int id) ? id : (int?)null;
+        }
+
+        /// <summary>Removes the mapping when a client disconnects.</summary>
+        public void RemoveNetworkClient(ulong clientId)
+        {
+            _networkClientToPlayer.Remove(clientId);
         }
     }
 }

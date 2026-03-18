@@ -1,4 +1,6 @@
 using Core;
+using MoreMountains.Feedbacks;
+using Scenes.Arena;
 using UnityEngine;
 
 namespace Scenes.Arena.Bomb
@@ -7,30 +9,28 @@ namespace Scenes.Arena.Bomb
     {
         public AnimatedSpriteRenderer spriteRenderer;
 
-        private AudioSource audioSource;
-        private float explosionClipLength;
+        [Tooltip("MMF_Player on this prefab — add an MMF_MMSoundManagerSound feedback and assign your explode clip there.")]
+        [SerializeField] private MMF_Player explosionFeedbacks;
+
+        private GameManager _gameManager;
 
         private void Awake()
         {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-                audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
-                audioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
+            var root = transform.root != transform ? transform.root : null;
+            _gameManager = (root != null ? root.GetComponentInChildren<GameManager>() : null)
+                           ?? GameManager.Instance;
+            _gameManager?.RegisterExplosion(this);
         }
 
-        /// <summary>Play the explosion sound once on this object's AudioSource (call only on the central explosion). DestroyAfter will delay destruction until the clip finishes.</summary>
+        private void OnDestroy()
+        {
+            _gameManager?.UnregisterExplosion(this);
+        }
+
+        /// <summary>Plays the explosion feedbacks (call only on the central explosion).</summary>
         public void PlayExplosionSound()
         {
-            if (
-                audioSource == null
-                || AudioController.I == null
-                || AudioController.I.ExplosionClip == null
-            )
-                return;
-            audioSource.PlayOneShot(AudioController.I.ExplosionClip, 0.8f);
-            explosionClipLength = AudioController.I.ExplosionClip.length;
+            explosionFeedbacks?.PlayFeedbacks(transform.position);
         }
 
         public void SetDirection(Vector2 direction)
@@ -41,9 +41,9 @@ namespace Scenes.Arena.Bomb
 
         public void DestroyAfter(float seconds)
         {
-            float delay =
-                explosionClipLength > 0 ? Mathf.Max(seconds, explosionClipLength) : seconds;
-            Destroy(gameObject, delay);
+            float soundDuration = explosionFeedbacks != null ? explosionFeedbacks.TotalDuration : 0f;
+            Destroy(gameObject, Mathf.Max(seconds, soundDuration));
         }
     }
 }
+

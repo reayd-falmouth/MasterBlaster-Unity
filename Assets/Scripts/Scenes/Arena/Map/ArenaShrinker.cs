@@ -1,8 +1,12 @@
-﻿using System.Collections;
+using System.Collections;
 using Core;
+using MoreMountains.Feedbacks;
+using Scenes.Arena;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
+using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 // AudioController
@@ -13,8 +17,11 @@ namespace Scenes.Arena.Map
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Grid), typeof(AudioSource))]
-    public class ArenaShrinker : MonoBehaviour
+    public class ArenaShrinker : NetworkBehaviour
     {
+        /// <summary>Replicated timer so client UIs stay in sync with the host.</summary>
+        private NetworkVariable<float> _netTimeRemaining = new NetworkVariable<float>(
+            0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         // -------------------- Timer & Alarm --------------------
         [Header("Timer")]
         [Tooltip("Only run timer/alarm/shrinking when enabled.")]
@@ -31,9 +38,9 @@ namespace Scenes.Arena.Map
         [SerializeField]
         private float alarmThresholdFraction = 0.10f;
 
-        [Tooltip("When remaining time <= this fraction, shrinking starts (e.g. 0.05 = last 5%).")]
+        [Tooltip("When remaining time <= this fraction, shrinking starts (e.g. 0.15 = last 15%).")]
         [SerializeField]
-        private float shrinkThresholdFraction = 0.05f;
+        private float shrinkThresholdFraction = 0.15f;
 
         [Tooltip("Start timer automatically on Start().")]
         [SerializeField]
@@ -49,14 +56,11 @@ namespace Scenes.Arena.Map
         [SerializeField]
         private float pulseSpeed = 5f; // sin speed
 
-        [SerializeField]
-        private float alarmRepeatSeconds = 1.0f; // fallback loop via PlayAlarm()
-
         // --- Timer & Alarm (existing fields stay the same) ---
 
-        [Header("Local Siren (scene-scoped)")]
-        [SerializeField]
-        private AudioSource alarmSource;
+        [Header("Alarm Feedbacks")]
+        [SerializeField] private MMF_Player alarmStartFeedbacks;
+        [SerializeField] private MMF_Player alarmStopFeedbacks;
 
         private AudioSource sirenSource; // local to Arena; dies with the scene
 
@@ -99,10 +103,14 @@ namespace Scenes.Arena.Map
         [SerializeField]
         private Color gizmoColor = new Color(1f, 0.3f, 0.2f, 0.35f);
 
+        // Fix 5: pre-allocated overlap buffer — avoids OverlapBoxAll array alloc during shrink
+        private static readonly Collider2D[] _overlapBuffer = new Collider2D[16];
+
         // internal state
         private float timeRemaining;
         private bool alarmActive;
         private bool shrinkingStarted;
+        private bool shrinkingComplete;
         private bool timerRunning;
         private bool endingTriggered;
         private Color originalBg;
@@ -116,8 +124,10 @@ namespace Scenes.Arena.Map
 
         void Awake()
         {
-            // pull PlayerPref if present (keeps parity with your old GameManager setting)
-            if (PlayerPrefs.HasKey("Shrinking"))
+            // In training mode use overrides; otherwise pull from PlayerPrefs
+            if (TrainingMode.IsActive)
+                shrinkingEnabled = false;
+            else if (PlayerPrefs.HasKey("Shrinking"))
                 shrinkingEnabled = PlayerPrefs.GetInt("Shrinking", 1) == 1;
 
             if (!targetCamera)
@@ -182,6 +192,11 @@ namespace Scenes.Arena.Map
         // -------------------- Internals --------------------
         private IEnumerator TimerRoutine()
         {
+            // In online play, only the host runs the timer.
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && !IsServer)
+                yield break;
+
             float alarmTime = matchDuration * Mathf.Clamp01(alarmThresholdFraction);
             float shrinkTime = matchDuration * Mathf.Clamp01(shrinkThresholdFraction);
 
@@ -189,16 +204,27 @@ namespace Scenes.Arena.Map
             {
                 timeRemaining -= Time.deltaTime;
 
+                if (isOnline)
+                    _netTimeRemaining.Value = timeRemaining;
+
                 if (!alarmActive && timeRemaining <= alarmTime)
                     StartAlarm();
 
                 if (!shrinkingStarted && timeRemaining <= shrinkTime)
                 {
                     shrinkingStarted = true;
+                    shrinkingComplete = false;
                     StartCoroutine(ShrinkRoutine());
                 }
 
                 yield return null;
+            }
+
+            // When shrinking has started, wait for it to reach the center before ending the round
+            if (shrinkingStarted && !shrinkingComplete)
+            {
+                while (!shrinkingComplete)
+                    yield return null;
             }
 
             // timer expired
@@ -209,29 +235,27 @@ namespace Scenes.Arena.Map
             if (!endingTriggered)
             {
                 endingTriggered = true;
-                // End the game on timeout
+                if (TrainingMode.IsActive)
+                    yield break;   // timer is disabled in training; episode resets are handled per-arena by BombermanAgent
                 SceneFlowManager.I.GoTo(FlowState.Standings);
             }
         }
 
         public void StartAlarm()
         {
-            if (alarmSource == null)
-                return;
-            if (!alarmSource.isPlaying)
-            {
-                alarmSource.volume = 0.8f;
-                alarmSource.loop = true;
-                alarmSource.Play();
-            }
+            alarmActive = true;
+            alarmStartFeedbacks?.PlayFeedbacks();
         }
 
         public void StopAlarm()
         {
-            if (alarmSource != null && alarmSource.isPlaying)
-            {
-                alarmSource.Stop();
-            }
+            alarmActive = false;
+            alarmStopFeedbacks?.PlayFeedbacks();
+        }
+
+        private void OnDestroy()
+        {
+            alarmStopFeedbacks?.PlayFeedbacks();
         }
 
         // ------------ Shrinking (clockwise snake, inside border) ------------
@@ -320,6 +344,17 @@ namespace Scenes.Arena.Map
                 }
                 left++;
             }
+
+            shrinkingComplete = true;
+        }
+
+        /// <summary>Tells clients to place an indestructible block at <paramref name="worldPos"/>.</summary>
+        [ClientRpc]
+        private void PlaceBlockClientRpc(Vector3 worldPos)
+        {
+            if (IsServer) return;
+            if (indestructiblePrefab != null)
+                Instantiate(indestructiblePrefab, worldPos, Quaternion.identity, indestructiblesTilemap.transform);
         }
 
         private void PlaceBlock(Vector3Int cell)
@@ -329,9 +364,11 @@ namespace Scenes.Arena.Map
             if (destructiblesTilemap && destructiblesTilemap.HasTile(cell))
                 destructiblesTilemap.SetTile(cell, null);
 
-            var hits = Physics2D.OverlapBoxAll(worldCenter, overlapBoxSize, 0f, overlapMask);
-            foreach (var h in hits)
+            // Fix 5: NonAlloc reuses static buffer instead of allocating a new array each block
+            int hitCount = Physics2D.OverlapBoxNonAlloc(worldCenter, overlapBoxSize, 0f, _overlapBuffer, overlapMask);
+            for (int hi = 0; hi < hitCount; hi++)
             {
+                var h = _overlapBuffer[hi];
                 if (!h)
                     continue;
 
@@ -341,7 +378,7 @@ namespace Scenes.Arena.Map
                     rbc.Detonate(); // preferred path
                     continue;
                 }
-                if (h.CompareTag("Item") || h.GetComponent<Destructible>() != null)
+                if (h.GetComponent<ItemPickup>() != null || h.GetComponent<Destructible>() != null)
                 {
                     Destroy(h.gameObject);
                     continue;
@@ -360,6 +397,10 @@ namespace Scenes.Arena.Map
                 Quaternion.identity,
                 indestructiblesTilemap.transform
             );
+
+            bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+            if (isOnline && IsServer)
+                PlaceBlockClientRpc(worldCenter);
 
             // 3) Play its SFX
             var src = go.GetComponent<AudioSource>();

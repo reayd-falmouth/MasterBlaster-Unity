@@ -1,6 +1,8 @@
 using Core;
+using Online;
 using Scenes.Shop;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace Scenes.MainMenu
@@ -10,14 +12,22 @@ namespace Scenes.MainMenu
         [System.Serializable]
         public class MenuOption
         {
-            public Text pointerText; // Purple ">" text
-            public Text optionLabel; // Left-hand text, e.g. "WINS NEEDED"
-            public Text valueLabel; // Right-hand text, e.g. "3"
+            public Text pointerText;
+            public Text optionLabel;
+            public Text valueLabel;
         }
 
         public MenuOption[] options;
 
-        private int selectedIndex = 0;
+        [Header("Input Setup")]
+        [Tooltip("Assign UIMenus or PlayerControls Input Action Asset in Inspector.")]
+        public InputActionAsset inputActions;
+
+        private InputAction _moveAction;
+        private InputAction _submitAction;
+        private Vector2 _lastMoveInput;
+
+        private int selectedIndex;
 
         // Default values
         private int winsNeeded = 3;
@@ -28,6 +38,35 @@ namespace Scenes.MainMenu
         private bool startMoney = false;
         private bool normalLevel = true;
         private bool gambling = true;
+        private bool quickRestart = false;
+
+        private void Awake()
+        {
+            if (inputActions == null)
+            {
+                Debug.LogWarning("[MainMenuController] InputActionAsset not assigned. Assign UIMenus (or PlayerControls) in Inspector.");
+                return;
+            }
+            var playerMap = inputActions.FindActionMap("Player");
+            _moveAction = playerMap.FindAction("Move");
+            _submitAction = playerMap.FindAction("PlaceBomb");
+        }
+
+        private void OnEnable()
+        {
+            if (_moveAction != null)
+                _moveAction.Enable();
+            if (_submitAction != null)
+                _submitAction.Enable();
+        }
+
+        private void OnDisable()
+        {
+            if (_moveAction != null)
+                _moveAction.Disable();
+            if (_submitAction != null)
+                _submitAction.Disable();
+        }
 
         private void Start()
         {
@@ -38,47 +77,73 @@ namespace Scenes.MainMenu
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.UpArrow))
-            {
-                selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
-                UpdatePointers();
-            }
-            if (Input.GetKeyDown(KeyCode.DownArrow))
+            if (_moveAction == null || _submitAction == null)
+                return;
+
+            Vector2 moveInput = _moveAction.ReadValue<Vector2>();
+
+            if (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f)
             {
                 selectedIndex = (selectedIndex + 1) % options.Length;
                 UpdatePointers();
             }
-
-            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.RightArrow))
+            else if (moveInput.y > 0.5f && _lastMoveInput.y <= 0.5f)
             {
-                ChangeOption();
+                selectedIndex = (selectedIndex - 1 + options.Length) % options.Length;
+                UpdatePointers();
+            }
+
+            if (moveInput.x < -0.5f && _lastMoveInput.x >= -0.5f)
+            {
+                ChangeOption(false);
+                UpdateMenuText();
+            }
+            else if (moveInput.x > 0.5f && _lastMoveInput.x <= 0.5f)
+            {
+                ChangeOption(true);
                 UpdateMenuText();
             }
 
-            if (Input.GetKeyDown(KeyCode.Return))
-            {
-                SavePrefs();
-                SceneFlowManager.I.SignalMenuStart();
-            }
+            if (_submitAction.WasPressedThisFrame())
+                HandleSubmit();
+
+            _lastMoveInput = moveInput;
         }
 
-        void ChangeOption()
+        [Header("Online")]
+        [Tooltip("Assign the OnlineLobbyUI panel GameObject. When Online is selected, this panel activates instead of starting locally.")]
+        [SerializeField] private GameObject onlineLobbyPanel;
+
+        private bool _onlineSelected;
+
+        private void HandleSubmit()
+        {
+            if (_onlineSelected)
+            {
+                // Show the online lobby panel; NetworkLobbyManager handles the rest.
+                if (onlineLobbyPanel != null)
+                    onlineLobbyPanel.SetActive(true);
+                return;
+            }
+
+            if (SessionManager.GetConnectedControllerCount() == 0)
+            {
+                Debug.LogWarning("Connect at least one controller to play.");
+                return;
+            }
+            SavePrefs();
+            SceneFlowManager.I.SignalMenuStart();
+        }
+
+        private void ChangeOption(bool rightArrow)
         {
             switch (selectedIndex)
             {
                 case 0:
-                    winsNeeded = Mathf.Clamp(
-                        winsNeeded + (Input.GetKeyDown(KeyCode.RightArrow) ? 1 : -1),
-                        3,
-                        9
-                    );
+                    winsNeeded = Mathf.Clamp(winsNeeded + (rightArrow ? 1 : -1), 3, 9);
                     break;
                 case 1:
-                    players = Mathf.Clamp(
-                        players + (Input.GetKeyDown(KeyCode.RightArrow) ? 1 : -1),
-                        2,
-                        5
-                    );
+                    players = Mathf.Clamp(players + (rightArrow ? 1 : -1), 2, 5);
                     break;
                 case 2:
                     shop = !shop;
@@ -101,7 +166,7 @@ namespace Scenes.MainMenu
             }
         }
 
-        void UpdateMenuText()
+        private void UpdateMenuText()
         {
             options[0].valueLabel.text = winsNeeded.ToString();
             options[1].valueLabel.text = players.ToString();
@@ -111,17 +176,17 @@ namespace Scenes.MainMenu
             options[5].valueLabel.text = startMoney ? "ON" : "OFF";
             options[6].valueLabel.text = normalLevel ? "YES" : "NO";
             options[7].valueLabel.text = gambling ? "YES" : "NO";
+            if (options.Length > 8)
+                options[8].valueLabel.text = quickRestart ? "ON" : "OFF";
         }
 
-        void UpdatePointers()
+        private void UpdatePointers()
         {
             for (int i = 0; i < options.Length; i++)
-            {
                 options[i].pointerText.text = (i == selectedIndex) ? "> " : "  ";
-            }
         }
 
-        void SavePrefs()
+        private void SavePrefs()
         {
             PlayerPrefs.SetInt("WinsNeeded", winsNeeded);
             PlayerPrefs.SetInt("Players", players);
@@ -131,19 +196,16 @@ namespace Scenes.MainMenu
             PlayerPrefs.SetInt("StartMoney", startMoney ? 1 : 0);
             PlayerPrefs.SetInt("NormalLevel", normalLevel ? 1 : 0);
             PlayerPrefs.SetInt("Gambling", gambling ? 1 : 0);
+            PlayerPrefs.SetInt("QuickRestart", quickRestart ? 1 : 0);
 
-            // Reset in-memory session state for new game (wins, coins, upgrades in SessionManager)
-            // SessionManager may not exist in the Menu scene; it is created in Shop/Game. Guard so we don't throw and block SignalMenuStart().
-            if (SessionManager.Instance != null)
-                SessionManager.Instance.Initialize(players);
+            // Always reset session (wins, coins, upgrades) when starting a new game from the menu
+            SessionManager.Instance.Initialize(players);
 
-            // Only the first arena load (from menu) should give start money; Shop → Countdown → Game should not.
             PlayerPrefs.SetInt("GiveStartMoneyNextArena", 1);
-
             PlayerPrefs.Save();
         }
 
-        void LoadPrefs()
+        private void LoadPrefs()
         {
             winsNeeded = PlayerPrefs.GetInt("WinsNeeded", 3);
             players = PlayerPrefs.GetInt("Players", 2);
@@ -153,6 +215,7 @@ namespace Scenes.MainMenu
             startMoney = PlayerPrefs.GetInt("StartMoney", 0) == 1;
             normalLevel = PlayerPrefs.GetInt("NormalLevel", 1) == 1;
             gambling = PlayerPrefs.GetInt("Gambling", 1) == 1;
+            quickRestart = PlayerPrefs.GetInt("QuickRestart", 0) == 1;
         }
     }
 }

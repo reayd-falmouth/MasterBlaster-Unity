@@ -2,6 +2,7 @@
 
 using System.Collections;
 using Core;
+using MoreMountains.Feedbacks;
 using Scenes.Arena.Player;
 using UnityEngine;
 
@@ -36,10 +37,11 @@ namespace Scenes.Arena.Bomb
         private KeyCode detonateKey;
         private float fuseTime;
 
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player moveFeedbacks;
+
         private bool detonated;
         private bool isMoving;
-
-        private AudioSource moveAudioSource;
 
         private void Awake()
         {
@@ -49,13 +51,6 @@ namespace Scenes.Arena.Bomb
                 rb.bodyType = RigidbodyType2D.Kinematic; // default: immovable
                 rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             }
-
-            moveAudioSource = GetComponent<AudioSource>();
-            if (moveAudioSource == null)
-                moveAudioSource = gameObject.AddComponent<AudioSource>();
-            moveAudioSource.playOnAwake = false;
-            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
-                moveAudioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
 
             SetDirection(Vector2.zero);
         }
@@ -93,13 +88,16 @@ namespace Scenes.Arena.Bomb
             if (detonated)
                 return;
 
-            // Detonation rules
-            if (mode == BombMode.Time && !Input.GetKey(detonateKey))
+            // Detonation rules: detonate when key is not held (or when AI releases)
+            bool detonateHeld = owner != null && owner.GetComponent<IPlayerInput>() != null
+                ? owner.GetComponent<IPlayerInput>().GetDetonateHeld()
+                : Input.GetKey(detonateKey);
+            if (mode == BombMode.Time && !detonateHeld)
             {
                 Detonate();
                 return;
             }
-            if (mode == BombMode.Remote && !Input.GetKey(detonateKey))
+            if (mode == BombMode.Remote && !detonateHeld)
             {
                 Detonate();
                 return;
@@ -109,14 +107,22 @@ namespace Scenes.Arena.Bomb
             if (mode == BombMode.Remote && owner != null)
             {
                 Vector2 input = Vector2.zero;
-                if (Input.GetKey(owner.inputUp))
-                    input = Vector2.up;
-                else if (Input.GetKey(owner.inputDown))
-                    input = Vector2.down;
-                else if (Input.GetKey(owner.inputLeft))
-                    input = Vector2.left;
-                else if (Input.GetKey(owner.inputRight))
-                    input = Vector2.right;
+                var provider = owner.GetComponent<IPlayerInput>();
+                if (provider != null)
+                {
+                    input = provider.GetMoveDirection();
+                }
+                else
+                {
+                    if (Input.GetKey(owner.inputUp))
+                        input = Vector2.up;
+                    else if (Input.GetKey(owner.inputDown))
+                        input = Vector2.down;
+                    else if (Input.GetKey(owner.inputLeft))
+                        input = Vector2.left;
+                    else if (Input.GetKey(owner.inputRight))
+                        input = Vector2.right;
+                }
 
                 SetDirection(input);
             }
@@ -152,7 +158,15 @@ namespace Scenes.Arena.Bomb
 
         private IEnumerator FuseRoutine()
         {
-            yield return new WaitForSeconds(fuseTime);
+            float elapsed = 0f;
+            var bombInfo = GetComponent<BombInfo>();
+            while (elapsed < fuseTime)
+            {
+                elapsed += Time.deltaTime;
+                if (bombInfo != null)
+                    bombInfo.timeRemainingFraction = 1f - Mathf.Clamp01(elapsed / fuseTime);
+                yield return null;
+            }
             Detonate();
         }
 
@@ -280,24 +294,13 @@ namespace Scenes.Arena.Bomb
 
         private void PlayMoveSound()
         {
-            if (moveAudioSource == null)
-            {
-                isMoving = true;
-                return;
-            }
-            if (AudioController.I != null && AudioController.I.MoveEffectClip != null)
-            {
-                moveAudioSource.clip = AudioController.I.MoveEffectClip;
-                moveAudioSource.loop = true;
-                moveAudioSource.Play();
-            }
+            moveFeedbacks?.PlayFeedbacks();
             isMoving = true;
         }
 
         private void StopMoveSound()
         {
-            if (moveAudioSource != null && moveAudioSource.isPlaying)
-                moveAudioSource.Stop();
+            moveFeedbacks?.StopFeedbacks();
             isMoving = false;
         }
     }

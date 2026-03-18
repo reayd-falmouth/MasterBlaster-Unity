@@ -2,8 +2,13 @@
     "name": "Scripts",
     "rootNamespace": "",
     "references": [
-        "UnityEngine",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.ML-Agents",
+        "Unity.Netcode.Runtime",
+        "Unity.Services.Multiplayer",
+        "Unity.Services.Authentication",
+        "Unity.Services.Core",
+        "MoreMountains.Tools"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
