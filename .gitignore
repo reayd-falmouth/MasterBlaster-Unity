@@ -108,3 +108,5 @@ InitTestScene*.unity*
 .vscode/
 .claude/
 .config/
+unity_coverage_log.txt
+unity_test_log.txt
