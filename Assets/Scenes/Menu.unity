@@ -411,6 +411,7 @@ MonoBehaviour:
     optionLabel: {fileID: 68809715}
     valueLabel: {fileID: 1448413533}
   inputActions: {fileID: -944628639613478452, guid: 62380af980098b341b15413f1ebc8cd8, type: 3}
+  onlineLobbyPanel: {fileID: 0}
 --- !u!4 &273441096
 Transform:
   m_ObjectHideFlags: 0
@@ -2811,7 +2812,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1942624798}
   - component: {fileID: 1942624797}
-  - component: {fileID: 1942624796}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2819,14 +2819,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &1942624796
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1942624795}
-  m_Enabled: 1
 --- !u!20 &1942624797
 Camera:
   m_ObjectHideFlags: 0

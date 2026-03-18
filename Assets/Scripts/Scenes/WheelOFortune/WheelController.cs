@@ -1,5 +1,6 @@
 using System.Collections;
 using Core;
+using MoreMountains.Feedbacks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -31,44 +32,44 @@ namespace Scenes.WheelOFortune
         [Range(0.5f, 5f)]
         public float postSpinDelay = 1.5f;
 
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player tickFeedbacks;
+        [SerializeField] private MMF_Player rewardFeedbacks;
+
         private Transform[] rowPointers;
         private int playerCount;
 
         private void Start()
         {
-            // Clear old rows
-            foreach (Transform child in wheelPanel)
-            {
-                Destroy(child.gameObject);
-            }
-
-            // Build rows
+            // How many rows exist under the panel (e.g. 5)
+            int maxRows = wheelPanel.childCount;
+            // How many players are actually in the game
             playerCount = PlayerPrefs.GetInt("Players", 2);
+            playerCount = Mathf.Clamp(playerCount, 0, maxRows);
             rowPointers = new Transform[playerCount];
-
-            for (int i = 1; i <= playerCount; i++)
+            for (int i = 0; i < maxRows; i++)
             {
-                GameObject row = Instantiate(rowPrefab, wheelPanel);
-
-                // Avatar
-                var avatar = row.transform.Find("Avatar").GetComponent<Image>();
-                if (avatarSprites != null && avatarSprites.Length >= i)
+                Transform row = wheelPanel.GetChild(i);
+                bool isActive = i < playerCount;
+                row.gameObject.SetActive(isActive);
+                if (!isActive)
+                    continue;
+                // Set avatar sprite
+                var avatar = row.Find("Avatar").GetComponent<Image>();
+                if (avatarSprites != null && avatarSprites.Length > i)
                 {
-                    avatar.sprite = avatarSprites[i - 1];
+                    avatar.sprite = avatarSprites[i];
                 }
-
-                // Pointer
-                rowPointers[i - 1] = row.transform.Find("Pointer");
-                rowPointers[i - 1].gameObject.SetActive(false); // start hidden
+                // Store pointer and start hidden
+                rowPointers[i] = row.Find("Pointer");
+                rowPointers[i].gameObject.SetActive(false);
             }
-
             // Start spin
             StartCoroutine(SpinAndStop());
         }
 
         private IEnumerator SpinAndStop()
         {
-            AudioController.I.ResetWheelTicks();
 
             spinDuration = Random.Range(minSpinDuration, maxSpinDuration);
 
@@ -89,9 +90,8 @@ namespace Scenes.WheelOFortune
                 // Show current pointer
                 rowPointers[index].gameObject.SetActive(true);
 
-                // Play tick sound
-                AudioController.I.PlayWheelTick();
-
+                tickFeedbacks?.PlayFeedbacks();
+                
                 // Evaluate delay from curve
                 float t = elapsed / spinDuration; // 0..1
                 float delay = spinCurve.Evaluate(t);
@@ -102,8 +102,7 @@ namespace Scenes.WheelOFortune
                 elapsed += delay;
             }
 
-            // Final reward sound
-            AudioController.I.PlayChaChing();
+            rewardFeedbacks?.PlayFeedbacks();
 
             // Reward selected player with a coin (session-only, in SessionManager)
             int winningPlayer = stopIndex + 1;

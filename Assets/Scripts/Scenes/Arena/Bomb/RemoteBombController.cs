@@ -2,6 +2,7 @@
 
 using System.Collections;
 using Core;
+using MoreMountains.Feedbacks;
 using Scenes.Arena.Player;
 using UnityEngine;
 
@@ -36,10 +37,11 @@ namespace Scenes.Arena.Bomb
         private KeyCode detonateKey;
         private float fuseTime;
 
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player moveFeedbacks;
+
         private bool detonated;
         private bool isMoving;
-
-        private AudioSource moveAudioSource;
 
         private void Awake()
         {
@@ -49,13 +51,6 @@ namespace Scenes.Arena.Bomb
                 rb.bodyType = RigidbodyType2D.Kinematic; // default: immovable
                 rb.constraints = RigidbodyConstraints2D.FreezeRotation;
             }
-
-            moveAudioSource = GetComponent<AudioSource>();
-            if (moveAudioSource == null)
-                moveAudioSource = gameObject.AddComponent<AudioSource>();
-            moveAudioSource.playOnAwake = false;
-            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
-                moveAudioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
 
             SetDirection(Vector2.zero);
         }
@@ -299,24 +294,13 @@ namespace Scenes.Arena.Bomb
 
         private void PlayMoveSound()
         {
-            if (moveAudioSource == null)
-            {
-                isMoving = true;
-                return;
-            }
-            if (AudioController.I != null && AudioController.I.MoveEffectClip != null)
-            {
-                moveAudioSource.clip = AudioController.I.MoveEffectClip;
-                moveAudioSource.loop = true;
-                moveAudioSource.Play();
-            }
+            moveFeedbacks?.PlayFeedbacks();
             isMoving = true;
         }
 
         private void StopMoveSound()
         {
-            if (moveAudioSource != null && moveAudioSource.isPlaying)
-                moveAudioSource.Stop();
+            moveFeedbacks?.StopFeedbacks();
             isMoving = false;
         }
     }

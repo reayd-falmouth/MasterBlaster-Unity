@@ -1,10 +1,13 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 namespace Scenes.Arena
 {
     /// <summary>
     /// Keeps the camera viewport at the design aspect ratio (e.g. 640:512), adding
     /// letterboxing so the game view matches the Amiga look on 16:9 and other ratios.
+    /// Also centers the camera on the arena each time ApplyLetterbox() is called.
     /// Attach to the Main Camera in the Game scene.
     /// </summary>
     [RequireComponent(typeof(Camera))]
@@ -18,22 +21,44 @@ namespace Scenes.Arena
         [SerializeField]
         private int designHeight = DesignResolution.Height;
 
+        [Tooltip("World-space center override. Leave at (0,0) to auto-detect from scene tilemaps.")]
+        [SerializeField]
+        private Vector2 arenaCenter = Vector2.zero;
+
         private Camera _camera;
         private float _designAspect;
         private int _lastScreenWidth;
         private int _lastScreenHeight;
+        private Vector2 _resolvedCenter;
 
         private void Awake()
         {
             _camera = GetComponent<Camera>();
             _designAspect = designWidth / (float)designHeight;
+            // Ensure local position starts at zero so the CameraShaker parent drives world XY.
+            transform.localPosition = new Vector3(0f, 0f, transform.localPosition.z);
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            // Re-detect arena center and re-centre the camera every time a new scene loads.
+            RefreshAndApply();
+        }
+
+        private void OnEnable()
+        {
+            RefreshAndApply();
         }
 
         private void Start()
         {
-            _lastScreenWidth = Screen.width;
-            _lastScreenHeight = Screen.height;
-            ApplyLetterbox();
+            RefreshAndApply();
         }
 
         private void Update()
@@ -57,9 +82,18 @@ namespace Scenes.Arena
         }
 #endif
 
+        /// <summary>Re-detect the arena center and reapply letterbox + centering. Call this after the arena is fully built.</summary>
+        public void RefreshAndApply()
+        {
+            _lastScreenWidth  = Screen.width;
+            _lastScreenHeight = Screen.height;
+            _resolvedCenter   = arenaCenter != Vector2.zero ? arenaCenter : DetectArenaCenter();
+            ApplyLetterbox();
+        }
+
         /// <summary>
-        /// Sets the camera's viewport rect so the rendered area has the design aspect ratio,
-        /// centered with bars (letterbox or pillarbox) as needed.
+        /// Centers the camera on the arena and sets the viewport rect to the design aspect ratio,
+        /// adding letterbox / pillarbox bars as needed.
         /// </summary>
         public void ApplyLetterbox()
         {
@@ -70,6 +104,9 @@ namespace Scenes.Arena
             float screenHeight = Screen.height;
             if (screenWidth <= 0 || screenHeight <= 0)
                 return;
+
+            // Keep the camera centered on the arena every time letterbox is applied.
+            transform.position = new Vector3(_resolvedCenter.x, _resolvedCenter.y, transform.position.z);
 
             float screenAspect = screenWidth / screenHeight;
 
@@ -92,6 +129,29 @@ namespace Scenes.Arena
             }
 
             _camera.rect = new Rect(x, y, w, h);
+        }
+
+        /// <summary>Computes the world-space center of all Tilemaps in the scene.</summary>
+        private Vector2 DetectArenaCenter()
+        {
+            var tilemaps = FindObjectsByType<Tilemap>(FindObjectsSortMode.None);
+            if (tilemaps.Length == 0)
+                return Vector2.zero;
+
+            Bounds combined = default;
+            bool first = true;
+            foreach (var tm in tilemaps)
+            {
+                tm.CompressBounds();
+                if (tm.cellBounds.size == Vector3Int.zero)
+                    continue;
+                var worldCenter = tm.transform.TransformPoint(tm.localBounds.center);
+                var worldBounds = new Bounds(worldCenter, tm.localBounds.size);
+                if (first) { combined = worldBounds; first = false; }
+                else combined.Encapsulate(worldBounds);
+            }
+
+            return first ? Vector2.zero : (Vector2)combined.center;
         }
     }
 }

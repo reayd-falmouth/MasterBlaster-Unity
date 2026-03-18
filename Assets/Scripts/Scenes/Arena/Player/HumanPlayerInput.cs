@@ -26,10 +26,22 @@ namespace Scenes.Arena.Player
         [Tooltip("Kept for compatibility with GameManager; input comes from the action asset.")]
         public int deviceIndex;
 
+        // When set, all input is read directly from this gamepad, ensuring per-player isolation.
+        private Gamepad _gamepad;
+        private float _debugUntil;
+
         private InputAction _moveAction;
         private InputAction _bombAction;
         private InputAction _detonateAction;
         private bool _bombHeldLastFrame;
+
+        /// <summary>Lock this component to a specific gamepad so it ignores all other controllers.</summary>
+        public void SetGamepad(Gamepad gamepad)
+        {
+            _gamepad = gamepad;
+            _debugUntil = Time.unscaledTime + 5f; // log input for 5 s after assignment
+            Debug.Log($"[HumanPlayerInput] {gameObject.name} → locked to: {(gamepad != null ? $"{gamepad.displayName} ({gamepad.GetType().Name})" : "NULL")}");
+        }
 
         public void Init(int deviceIndex, KeyCode up, KeyCode down, KeyCode left, KeyCode right, KeyCode bomb, KeyCode detonate)
         {
@@ -76,10 +88,25 @@ namespace Scenes.Arena.Player
         private void LateUpdate()
         {
             _bombHeldLastFrame = GetBombHeldInternal();
+
+            if (Time.unscaledTime < _debugUntil && _gamepad != null)
+            {
+                var stick = _gamepad.leftStick.ReadValue();
+                var dpad  = _gamepad.dpad.ReadValue();
+                bool bomb = _gamepad.buttonSouth.isPressed;
+                if (stick != Vector2.zero || dpad != Vector2.zero || bomb)
+                    Debug.Log($"[HumanPlayerInput] {gameObject.name} | stick={stick:F2} dpad={dpad:F2} bomb={bomb}");
+            }
         }
 
         public Vector2 GetMoveDirection()
         {
+            if (_gamepad != null)
+            {
+                var stick = _gamepad.leftStick.ReadValue();
+                var dpad  = _gamepad.dpad.ReadValue();
+                return stick.sqrMagnitude >= dpad.sqrMagnitude ? stick : dpad;
+            }
             if (_moveAction == null)
                 return Vector2.zero;
             return _moveAction.ReadValue<Vector2>();
@@ -93,6 +120,8 @@ namespace Scenes.Arena.Player
 
         private bool GetBombHeldInternal()
         {
+            if (_gamepad != null)
+                return _gamepad.buttonSouth.isPressed;
             if (_bombAction == null)
                 return false;
             return _bombAction.IsPressed();
@@ -101,6 +130,8 @@ namespace Scenes.Arena.Player
         /// <summary>True while the detonate/bomb button is held (do not detonate). When false (button released), time/remote bombs may detonate.</summary>
         public bool GetDetonateHeld()
         {
+            if (_gamepad != null)
+                return _gamepad.buttonSouth.isPressed || _gamepad.rightShoulder.isPressed;
             if (_detonateAction != null)
                 return _detonateAction.IsPressed();
             return _bombAction != null && _bombAction.IsPressed();

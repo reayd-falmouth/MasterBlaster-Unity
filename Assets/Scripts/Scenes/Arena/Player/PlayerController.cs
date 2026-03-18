@@ -1,5 +1,6 @@
 using System.Collections;
 using Core;
+using MoreMountains.Feedbacks;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Map;
 using Scenes.Arena.Player.Abilities;
@@ -64,19 +65,14 @@ namespace Scenes.Arena.Player
         [HideInInspector]
         public AnimatedSpriteRenderer visualOverrideRenderer;
 
-        private AudioSource audioSource;
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player deathFeedbacks;
+        [SerializeField] private MMF_Player randomItemFeedbacks;
 
         private void Awake()
         {
             rb = GetComponent<Rigidbody2D>();
             activeSpriteRenderer = spriteRendererDown;
-
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-                audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.playOnAwake = false;
-            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
-                audioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
 
             // Prefer a GameManager in the same arena hierarchy; fall back to the global Instance
             // for single-arena scenes where the player is a root-level GameObject.
@@ -241,13 +237,7 @@ namespace Scenes.Arena.Player
         {
             visualState = PlayerVisualState.Death;
             UpdateVisualState();
-
-            if (
-                audioSource != null
-                && AudioController.I != null
-                && AudioController.I.DeathClip != null
-            )
-                audioSource.PlayOneShot(AudioController.I.DeathClip, 0.8f);
+            deathFeedbacks?.PlayFeedbacks(transform.position);
             Invoke(nameof(OnDeathSequenceEnded), 1.25f);
         }
 
@@ -421,8 +411,7 @@ namespace Scenes.Arena.Player
                     Random.Range(0, System.Enum.GetValues(typeof(ItemPickup.ItemType)).Length);
             } while (randomType == ItemPickup.ItemType.Random);
 
-            // Give feedback that a random item was rolled
-            AudioController.I.PlayPowerUp();
+            randomItemFeedbacks?.PlayFeedbacks(transform.position);
 
             ItemPickup.ApplyItem(this.gameObject, randomType);
         }

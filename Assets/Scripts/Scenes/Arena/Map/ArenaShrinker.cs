@@ -1,5 +1,6 @@
 using System.Collections;
 using Core;
+using MoreMountains.Feedbacks;
 using Scenes.Arena;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
@@ -57,9 +58,9 @@ namespace Scenes.Arena.Map
 
         // --- Timer & Alarm (existing fields stay the same) ---
 
-        [Header("Local Siren (scene-scoped)")]
-        [SerializeField]
-        private AudioSource alarmSource;
+        [Header("Alarm Feedbacks")]
+        [SerializeField] private MMF_Player alarmStartFeedbacks;
+        [SerializeField] private MMF_Player alarmStopFeedbacks;
 
         private AudioSource sirenSource; // local to Arena; dies with the scene
 
@@ -243,29 +244,18 @@ namespace Scenes.Arena.Map
         public void StartAlarm()
         {
             alarmActive = true;
-            if (Core.AudioController.I != null)
-                Core.AudioController.I.PlayAlarmLoop();
-            else if (alarmSource != null && !alarmSource.isPlaying)
-            {
-                alarmSource.volume = 0.8f;
-                alarmSource.loop = true;
-                alarmSource.Play();
-            }
+            alarmStartFeedbacks?.PlayFeedbacks();
         }
 
         public void StopAlarm()
         {
             alarmActive = false;
-            if (Core.AudioController.I != null)
-                Core.AudioController.I.StopAlarm();
-            if (alarmSource != null && alarmSource.isPlaying)
-                alarmSource.Stop();
+            alarmStopFeedbacks?.PlayFeedbacks();
         }
 
         private void OnDestroy()
         {
-            if (Core.AudioController.I != null)
-                Core.AudioController.I.StopAlarm();
+            alarmStopFeedbacks?.PlayFeedbacks();
         }
 
         // ------------ Shrinking (clockwise snake, inside border) ------------

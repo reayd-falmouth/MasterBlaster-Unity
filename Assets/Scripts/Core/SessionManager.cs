@@ -129,16 +129,23 @@ namespace Core
             int joystickCount = GetConnectedJoystickCount();
             int nextDevice = 1;
 
+            var allGamepads = Gamepad.all;
+            Debug.Log($"[SessionManager] AssignInputDevices — playerCount={playerCount}, gamepads detected={allGamepads.Count}");
+            for (int i = 0; i < allGamepads.Count; i++)
+                Debug.Log($"  Gamepad[{i}]: {allGamepads[i].displayName} ({allGamepads[i].GetType().Name})");
+
             for (int id = 1; id <= playerCount; id++)
             {
                 if (nextDevice <= joystickCount)
                 {
                     _playerDeviceIndex[id] = nextDevice;
+                    Debug.Log($"  Player {id} → Gamepad[{nextDevice - 1}]: {allGamepads[nextDevice - 1].displayName}");
                     nextDevice++;
                 }
                 else
                 {
                     _playerDeviceIndex[id] = -1; // AI
+                    Debug.Log($"  Player {id} → AI (no gamepad available)");
                 }
             }
         }

@@ -7,31 +7,37 @@ namespace Scenes.Arena
 {
     public class CountdownController : MonoBehaviour
     {
-        public Text countdownText; // Assign in inspector
-        public float interval = 1f; // seconds between counts
+        public Text  countdownText;
+        public float interval = 1f; // seconds between counts (visual only)
+
+        private void OnEnable()  => AudioController.OnOneShotComplete += OnMusicFinished;
+        private void OnDisable() => AudioController.OnOneShotComplete -= OnMusicFinished;
 
         private void Start()
         {
-            StartCoroutine(RunCountdown());
+            float clipLength = AudioController.I != null ? AudioController.I.ActiveClipLength : 0f;
+            if (clipLength > 0f)
+                interval = clipLength / 3f;
+
+            StartCoroutine(RunVisualCountdown());
         }
 
-        IEnumerator RunCountdown()
+        // Drives the visual 3-2-1 display independently of the music duration
+        IEnumerator RunVisualCountdown()
         {
             int count = 3;
-            float t0 = Time.realtimeSinceStartup;
-
             while (count > 0)
             {
                 countdownText.text = count.ToString();
-                float tShow = Time.realtimeSinceStartup - t0;
-                Debug.Log($"[Countdown] Showing '{count}' at t={tShow:F2}s, waiting {interval}s");
                 yield return new WaitForSeconds(interval);
-                float tAfterWait = Time.realtimeSinceStartup - t0;
-                Debug.Log($"[Countdown] Wait finished for '{count}' at t={tAfterWait:F2}s (waited {tAfterWait - tShow:F2}s)");
                 count--;
             }
+            countdownText.text = "";
+        }
 
-            Debug.Log($"[Countdown] SignalScreenDone at t={Time.realtimeSinceStartup - t0:F2}s");
+        // Scene ends when the music clip finishes — length of scene matches length of clip
+        private void OnMusicFinished()
+        {
             SceneFlowManager.I.SignalScreenDone();
         }
     }

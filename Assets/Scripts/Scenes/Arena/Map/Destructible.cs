@@ -1,4 +1,5 @@
 using Core;
+using MoreMountains.Feedbacks;
 using Scenes.Arena.Player;
 using Scenes.Arena.Player.Abilities;
 using UnityEngine;
@@ -19,7 +20,9 @@ namespace Scenes.Arena.Map
         private bool destroyed = false;
 
         private AnimatedSpriteRenderer anim;
-        private AudioSource moveAudioSource;
+
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player moveFeedbacks;
 
         private void Awake()
         {
@@ -31,13 +34,6 @@ namespace Scenes.Arena.Map
             rb.constraints = RigidbodyConstraints2D.FreezeRotation;
 
             anim = GetComponent<AnimatedSpriteRenderer>();
-
-            moveAudioSource = GetComponent<AudioSource>();
-            if (moveAudioSource == null)
-                moveAudioSource = gameObject.AddComponent<AudioSource>();
-            moveAudioSource.playOnAwake = false;
-            if (AudioController.I != null && AudioController.I.SoundFxMixerGroup != null)
-                moveAudioSource.outputAudioMixerGroup = AudioController.I.SoundFxMixerGroup;
         }
 
         private void Start()
@@ -64,23 +60,9 @@ namespace Scenes.Arena.Map
                 && rb.linearVelocity.magnitude > movementThreshold;
 
             if (isMoving && !wasMoving)
-            {
-                if (
-                    moveAudioSource != null
-                    && AudioController.I != null
-                    && AudioController.I.MoveEffectClip != null
-                )
-                {
-                    moveAudioSource.clip = AudioController.I.MoveEffectClip;
-                    moveAudioSource.loop = true;
-                    moveAudioSource.Play();
-                }
-            }
+                moveFeedbacks?.PlayFeedbacks();
             else if (wasMoving && !isMoving)
-            {
-                if (moveAudioSource != null && moveAudioSource.isPlaying)
-                    moveAudioSource.Stop();
-            }
+                moveFeedbacks?.StopFeedbacks();
 
             wasMoving = isMoving;
         }

@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/david/.claude/projects/**)",
-      "Read(//c/Users/david/.claude/**)"
+      "Read(//c/Users/david/.claude/**)",
+      "mcp__ide__getDiagnostics",
+      "Bash(grep -rl \"f832a23e62e95c4449daa85b028d43d5\" \"D:/Users/david/StonesAndDice_Unity_Projects/MasterBlaster/Assets/Audio/\" 2>/dev/null\ngrep -rl \"eec80ffb02a355b4795edbe58298ab2f\" \"D:/Users/david/StonesAndDice_Unity_Projects/MasterBlaster/Assets/\" 2>/dev/null | head -3)",
+      "Bash(grep -r \"5f7201a12d95ffc409449d95f23cf332\\\\|76c392e42b5098c458856cdf6ecaaaa1\\\\|4f231c4fb786f3946a6b90b886c48677\\\\|01614664b831546d2ae94a42149d80ac\\\\|0cd44c1031e13a943bb63640046fad76\\\\|dc42784cf147c0c48a680349fa168899\" D:UsersdavidStonesAndDice_Unity_ProjectsMasterBlasterAssets --include=*.meta -l)",
+      "Bash(xargs grep:*)",
+      "Bash(python -c \"import uuid; print\\(uuid.uuid4\\(\\).hex\\)\")",
+      "Bash(\"D:/Users/david/StonesAndDice_Unity_Projects/MasterBlaster/Assets/Scripts/Scenes/Arena/Map/DestructibleGenerator.cs.meta\":*)"
     ]
   }
 }

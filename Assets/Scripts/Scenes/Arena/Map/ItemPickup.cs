@@ -1,4 +1,5 @@
-using Core;
+using MoreMountains.Feedbacks;
+using MoreMountains.Tools;
 using Scenes.Arena;
 using Scenes.Arena.Bomb;
 using Scenes.Arena.Player;
@@ -28,6 +29,9 @@ namespace Scenes.Arena.Map
 
         public ItemType type;
 
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player pickupFeedbacks;
+
         private GameManager _gameManager;
 
         private void OnEnable()
@@ -56,66 +60,46 @@ namespace Scenes.Arena.Map
             {
                 case ItemType.ExtraBomb:
                     bombCtrl.AddBomb();
-                    AudioController.I.PlayPowerUp();
                     break;
-
                 case ItemType.BlastRadius:
                     bombCtrl.IncreaseBlastRadius();
-                    AudioController.I.PlayBombPickup();
                     break;
-
                 case ItemType.Superman:
                     supermanCtrl.Activate();
-                    AudioController.I.PlaySuperman();
                     break;
-
                 case ItemType.Protection:
                     protectionCtrl.Activate();
-                    AudioController.I.PlayProtection();
                     break;
-
                 case ItemType.Ghost:
                     ghostCtrl.Activate();
-                    AudioController.I.PlayGhost();
                     break;
-
                 case ItemType.SpeedIncrease:
                     playerCtrl.IncreaseSpeed();
-                    AudioController.I.PlaySpeedUp();
                     break;
-
                 case ItemType.Coin:
                     playerCtrl.AddCoin();
-                    AudioController.I.PlayCoin();
                     break;
-
                 case ItemType.TimeBomb:
                     bombCtrl.EnableTimeBomb();
-                    AudioController.I.PlayBombPickup();
                     break;
-
                 case ItemType.Stop:
                     playerCtrl.ActivateStop();
-                    AudioController.I.PlayPowerUp();
                     break;
-
                 case ItemType.RemoteBomb:
                     bombCtrl.EnableRemoteBomb();
-                    AudioController.I.PlayBombPickup();
                     break;
-
                 case ItemType.Death:
                     playerCtrl.ApplyDeath();
                     break;
-
                 case ItemType.Random:
-                    playerCtrl.ApplyRandom(); // recursion safe
+                    playerCtrl.ApplyRandom();
                     break;
             }
         }
 
         private void OnItemPickup(GameObject player)
         {
+            pickupFeedbacks?.PlayFeedbacks(transform.position);
             bool isOnline = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
             if (isOnline)
             {

@@ -1,4 +1,5 @@
 using Core;
+using MoreMountains.Feedbacks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,12 +17,14 @@ namespace Scenes.Standings
 
         [Header("Flow Settings")]
         [Tooltip("How long the standings screen stays active before advancing")]
-        public float autoAdvanceDelay = 3f; // configurable in inspector
+        public float autoAdvanceDelay = 3f;
+
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player openingFeedbacks;
 
         private void Start()
         {
-            // 1. Play opening sound
-            AudioController.I.PlayOhLaLa(); // fixed to match AudioController method
+            openingFeedbacks?.PlayFeedbacks();
 
             // 2. Clear out any old rows
             foreach (Transform child in standingsPanel)

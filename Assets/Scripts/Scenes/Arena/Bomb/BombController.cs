@@ -80,13 +80,25 @@ namespace Scenes.Arena.Bomb
             _playerController = GetComponent<PlayerController>();
             _agentNotify      = GetComponent<Scenes.Arena.Player.AI.BombermanAgent>();
 
+            // Auto-detect tilemaps from the active map.
+            // MapSelector (ExecutionOrder -500) runs before this (order 0), so FindObjectsByType
+            // only finds tilemaps on the currently-active map root — correct for both normal and alt levels.
+            var allTilemaps = _arenaRoot != null
+                ? _arenaRoot.GetComponentsInChildren<Tilemap>()
+                : FindObjectsByType<Tilemap>(FindObjectsSortMode.None);
+
             if (!indestructibleTiles)
             {
-                var tilemaps = _arenaRoot != null
-                    ? _arenaRoot.GetComponentsInChildren<Tilemap>()
-                    : FindObjectsByType<Tilemap>(FindObjectsSortMode.None);
-                foreach (var t in tilemaps)
+                foreach (var t in allTilemaps)
                     if (t.name == "Indestructibles") { indestructibleTiles = t; break; }
+            }
+
+            // If the inspector-assigned destructibleTiles is on an inactive GameObject (e.g. the normal
+            // map root was disabled by MapSelector for the alt level), find the active one instead.
+            if (destructibleTiles == null || !destructibleTiles.gameObject.activeInHierarchy)
+            {
+                foreach (var t in allTilemaps)
+                    if (t.name == "Destructibles") { destructibleTiles = t; break; }
             }
         }
 

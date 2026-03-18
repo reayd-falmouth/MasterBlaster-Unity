@@ -270,6 +270,11 @@ namespace Scenes.Arena
                     human.inputActions = asset;
                 else
                     Debug.LogWarning("[GameManager] No Input Action Asset for human player. Assign GameManager's 'Player Input Actions' in the Game scene, or put PlayerControls.inputactions in a Resources folder.");
+
+                // Lock this player to their specific gamepad so controllers don't cross-control.
+                int gpIndex = device.Value - 1;
+                if (gpIndex >= 0 && gpIndex < Gamepad.all.Count)
+                    human.SetGamepad(Gamepad.all[gpIndex]);
                 human.Init(
                     device.Value,
                     movement.inputUp,
@@ -384,7 +389,10 @@ namespace Scenes.Arena
                                 movement.playerId,
                                 lastAlive.name
                             );
-                        GoToOversClientRpc();
+                        if (IsNetworked)
+                            GoToOversClientRpc();
+                        else
+                            SceneFlowManager.I.GoToOvers();
                         return;
                     }
                 }
@@ -491,10 +499,17 @@ namespace Scenes.Arena
             SceneManager.LoadScene("Countdown");
         }
 
+        /// <summary>True when NGO is active (host/server/client session running).</summary>
+        private bool IsNetworked =>
+            NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening;
+
         private void Standings()
         {
             SyncCoinsToSessionManager();
-            GoToStandingsClientRpc();
+            if (IsNetworked)
+                GoToStandingsClientRpc();
+            else
+                SceneFlowManager.I.GoTo(FlowState.Standings);
         }
 
         // ------------------- Custom behaviours -------------------
@@ -504,9 +519,13 @@ namespace Scenes.Arena
             Debug.Log("[GameManager] Timer expired → game over!");
             if (TrainingMode.IsActive)
                 return;   // individual episode resets are handled by Academy / BombermanAgent.OnEpisodeBegin
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !IsServer)
+            if (IsNetworked && !IsServer)
                 return;
-            GoToStandingsClientRpc();
+            SyncCoinsToSessionManager();
+            if (IsNetworked)
+                GoToStandingsClientRpc();
+            else
+                SceneFlowManager.I.GoTo(FlowState.Standings);
         }
 
         void LoadAlternateLevelSettings()

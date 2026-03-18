@@ -1,4 +1,5 @@
 using Core;
+using MoreMountains.Feedbacks;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -20,14 +21,10 @@ namespace Scenes.Shop
 
         public ShopItem[] items;
 
-        [Header("Input")]
-        [Tooltip("Assign UIMenus or PlayerControls so the current player can navigate with gamepad. If unset, keyboard only.")]
-        [SerializeField]
-        private InputActionAsset inputActions;
-
-        private InputAction _moveAction;
-        private InputAction _submitAction;
+        // Direct gamepad reference for the current player (refreshed when player changes).
+        private Gamepad _currentGamepad;
         private Vector2 _lastMoveInput;
+        private bool _bombHeldLastFrame;
 
         private int selectedIndex = 0;
         private int playerCount;
@@ -36,7 +33,11 @@ namespace Scenes.Shop
         [Header("UI References")]
         public Transform coinContainer;
         public Sprite coinSprite;
-        public Text headingText; // <-- add this
+        public Text headingText;
+
+        [Header("Feedbacks")]
+        [SerializeField] private MMF_Player buyFeedbacks;
+        [SerializeField] private MMF_Player noBuyFeedbacks;
 
         /// <summary>
         /// Returns the pointer text for an item at the given index ("> " if selected, "  " otherwise).
@@ -57,30 +58,8 @@ namespace Scenes.Shop
 
         private void Awake()
         {
-            var asset = inputActions != null ? inputActions : Resources.Load<InputActionAsset>("PlayerControls");
-            if (asset != null)
-            {
-                var map = asset.FindActionMap("Player");
-                if (map != null)
-                {
-                    _moveAction = map.FindAction("Move");
-                    _submitAction = map.FindAction("PlaceBomb");
-                }
-            }
             if (items != null && items.Length > 0)
                 UpdatePointers();
-        }
-
-        private void OnEnable()
-        {
-            _moveAction?.Enable();
-            _submitAction?.Enable();
-        }
-
-        private void OnDisable()
-        {
-            _moveAction?.Disable();
-            _submitAction?.Disable();
         }
 
         private void Start()
@@ -103,26 +82,51 @@ namespace Scenes.Shop
             UpdateMenuText();
             UpdatePointers();
             RefreshCoinsDisplay();
-            UpdateHeading(); // <--
+            UpdateHeading();
+            RefreshGamepad();
+        }
+
+        /// <summary>Lock input to the current player's assigned gamepad. Falls back to the first connected gamepad.</summary>
+        private void RefreshGamepad()
+        {
+            _currentGamepad = null;
+            if (SessionManager.Instance != null)
+            {
+                int? deviceIndex = SessionManager.Instance.GetAssignedDevice(currentPlayer);
+                if (deviceIndex.HasValue)
+                {
+                    int gpIndex = deviceIndex.Value - 1;
+                    if (gpIndex >= 0 && gpIndex < Gamepad.all.Count)
+                        _currentGamepad = Gamepad.all[gpIndex];
+                }
+            }
+            // Fallback: use first available gamepad if player has none assigned (e.g. AI slot or unset).
+            if (_currentGamepad == null && Gamepad.all.Count > 0)
+                _currentGamepad = Gamepad.all[0];
+            _lastMoveInput = Vector2.zero;
+            _bombHeldLastFrame = false;
+            Debug.Log($"[ShopController] Player {currentPlayer} → gamepad: {(_currentGamepad != null ? _currentGamepad.displayName : "NONE")}");
         }
 
         private void Update()
         {
-            bool up, down, submit;
-            if (_moveAction != null && _submitAction != null)
+            Vector2 moveInput = Vector2.zero;
+            bool submitDown = false;
+
+            if (_currentGamepad != null)
             {
-                Vector2 moveInput = _moveAction.ReadValue<Vector2>();
-                up = Input.GetKeyDown(KeyCode.UpArrow) || (moveInput.y > 0.5f && _lastMoveInput.y <= 0.5f);
-                down = Input.GetKeyDown(KeyCode.DownArrow) || (moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f);
-                submit = Input.GetKeyDown(KeyCode.Return) || _submitAction.WasPressedThisFrame();
-                _lastMoveInput = moveInput;
+                var stick = _currentGamepad.leftStick.ReadValue();
+                var dpad  = _currentGamepad.dpad.ReadValue();
+                moveInput = stick.sqrMagnitude >= dpad.sqrMagnitude ? stick : dpad;
+
+                bool bombHeld = _currentGamepad.buttonSouth.isPressed;
+                submitDown = bombHeld && !_bombHeldLastFrame;
+                _bombHeldLastFrame = bombHeld;
             }
-            else
-            {
-                up = Input.GetKeyDown(KeyCode.UpArrow);
-                down = Input.GetKeyDown(KeyCode.DownArrow);
-                submit = Input.GetKeyDown(KeyCode.Return);
-            }
+
+            bool up   = moveInput.y >  0.5f && _lastMoveInput.y <=  0.5f;
+            bool down = moveInput.y < -0.5f && _lastMoveInput.y >= -0.5f;
+            _lastMoveInput = moveInput;
 
             if (up)
             {
@@ -135,7 +139,7 @@ namespace Scenes.Shop
                 UpdatePointers();
             }
 
-            if (submit)
+            if (submitDown)
             {
                 AttemptPurchase(selectedIndex);
                 RefreshCoinsDisplay();
@@ -241,11 +245,11 @@ namespace Scenes.Shop
                 {
                     currentPlayer++;
                     Debug.Log($"Next shop turn: Player {currentPlayer}");
-                    // Reset selection to top
                     selectedIndex = 0;
                     UpdatePointers();
                     RefreshCoinsDisplay();
-                    UpdateHeading(); // <--
+                    UpdateHeading();
+                    RefreshGamepad();
                 }
                 else
                 {
@@ -265,7 +269,7 @@ namespace Scenes.Shop
                 coins -= item.cost;
                 if (SessionManager.Instance != null)
                     SessionManager.Instance.SetCoins(playerId, coins);
-                AudioController.I.PlayBuy();
+                buyFeedbacks?.PlayFeedbacks();
 
                 ApplyUpgrade(playerId, item.type);
 
@@ -273,7 +277,7 @@ namespace Scenes.Shop
             }
             else
             {
-                AudioController.I.PlayNoBuy();
+                noBuyFeedbacks?.PlayFeedbacks();
                 Debug.Log($"Player {playerId} cannot afford {item.name}!");
             }
         }
