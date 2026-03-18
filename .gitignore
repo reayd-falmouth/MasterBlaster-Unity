@@ -105,3 +105,6 @@ InitTestScene*.unity*
 
 .idea/
 .cursor/
+.vscode/
+.claude/
+.config/
